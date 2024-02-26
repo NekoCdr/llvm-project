@@ -133,6 +133,7 @@ enum FormatCategoryItem {
   eFormatCategoryItemFilter = 1 << 1,
   eFormatCategoryItemSynth = 1 << 2,
   eFormatCategoryItemFormat = 1 << 3,
+  eFormatCategoryItemRecognizer = 1 << 4,
 };
 
 /// Expression execution policies
