@@ -2,8 +2,9 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++11 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -verify=expected,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify=expected,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify=expected,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2c %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: __SIZE_TYPE__ expands to 'long long' on some targets.
 __extension__ typedef __SIZE_TYPE__ size_t;
@@ -698,9 +699,9 @@ namespace dr437 { // dr437: sup 1308
   };
 }
 
-// dr438 FIXME write a codegen test
-// dr439 FIXME write a codegen test
-// dr441 FIXME write a codegen test
+// dr438 is in dr438.cpp
+// dr439 is in dr439.cpp
+// dr441 is in dr441.cpp
 // dr442: sup 348
 // dr443: na
 
@@ -943,39 +944,40 @@ namespace dr460 { // dr460: yes
 }
 
 // dr461: na
-// dr462 FIXME write a codegen test
+// dr462 is in dr462.cpp
 // dr463: na
 // dr464: na
 // dr465: na
 
-namespace dr466 { // dr466: no
-  typedef int I;
-  typedef const int CI;
-  typedef volatile int VI;
-  void f(int *a, CI *b, VI *c) {
-    a->~I();
-    a->~CI();
-    a->~VI();
-    a->I::~I();
-    a->CI::~CI();
-    a->VI::~VI();
+namespace dr466 { // dr466: 2.8
+typedef int I;
+typedef const int CI;
+typedef volatile int VI;
+void g(int a, CI b, VI c) {
+// since-cxx20-warning@-1 {{volatile-qualified parameter type 'VI' (aka 'volatile int') is deprecated}}
+  a.~I();
+  a.~CI();
+  a.~VI();
+  a.I::~I();
+  a.CI::~CI();
+  a.VI::~VI();
 
-    a->CI::~VI(); // FIXME: This is invalid; CI and VI are not the same scalar type.
+  a.CI::~VI(); // allowed by changes to [expr.id.prim.qual]/2 introduced in P1131R2
 
-    b->~I();
-    b->~CI();
-    b->~VI();
-    b->I::~I();
-    b->CI::~CI();
-    b->VI::~VI();
+  b.~I();
+  b.~CI();
+  b.~VI();
+  b.I::~I();
+  b.CI::~CI();
+  b.VI::~VI();
 
-    c->~I();
-    c->~CI();
-    c->~VI();
-    c->I::~I();
-    c->CI::~CI();
-    c->VI::~VI();
-  }
+  c.~I();
+  c.~CI();
+  c.~VI();
+  c.I::~I();
+  c.CI::~CI();
+  c.VI::~VI();
+}
 }
 
 namespace dr467 { // dr467: yes
@@ -1089,7 +1091,7 @@ namespace dr474 { // dr474: 3.4
   }
 }
 
-// dr475 FIXME write a codegen test
+// dr475 FIXME write a libc++abi test
 
 namespace dr477 { // dr477: 3.5
   struct A {
@@ -1437,7 +1439,7 @@ namespace dr491 { // dr491: dup 413
   // expected-error@-1 {{excess elements in array initializer}}
 }
 
-// dr492 FIXME write a codegen test
+// dr492 is in dr492.cpp
 
 namespace dr493 { // dr493: dup 976
   struct X {
