@@ -21,14 +21,17 @@ you'll get:
 
 import lldb
 
-
 def __lldb_init_module(debugger, internal_dict):
-    debugger.HandleCommand(
-        "type summary add -F ClangDataFormat.SourceLocation_summary clang::SourceLocation"
-    )
-    debugger.HandleCommand(
-        "type summary add -F ClangDataFormat.QualType_summary clang::QualType"
-    )
+    debugger.HandleCommand("type recognizer add -F ClangDataFormat.test clang::QualType")
+    # debugger.HandleCommand(
+    #     "type summary add -F ClangDataFormat.SourceLocation_summary clang::SourceLocation"
+    # )
+    # debugger.HandleCommand(
+    #     "type summary add -F ClangDataFormat.QualType_summary clang::QualType"
+    # )
+
+def test():
+    print("Hello World!")
 
 
 def SourceLocation_summary(srcloc, internal_dict):
