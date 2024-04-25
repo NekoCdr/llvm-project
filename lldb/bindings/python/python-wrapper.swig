@@ -1142,6 +1142,17 @@ lldb::ValueObjectSP lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObj
   return valobj_sp;
 }
 
+lldb::TypeImplSP
+lldb_private::python::SWIGBridge::LLDBSWIGPython_GetTypeImplSPFromSBType(
+    void *data) {
+  lldb::TypeImplSP type_impl_sp;
+  if (data) {
+    lldb::SBType *sb_ptr = (lldb::SBType *)data;
+    type_impl_sp = sb_ptr->GetSP();
+  }
+  return type_impl_sp;
+}
+
 // For the LogOutputCallback functions
 static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
                                                       void *baton) {

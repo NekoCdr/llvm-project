@@ -198,6 +198,8 @@ public:
   static lldb::ValueObjectSP
   LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);
 
+  static lldb::TypeImplSP LLDBSWIGPython_GetTypeImplSPFromSBType(void *data);
+
   static bool LLDBSwigPython_UpdateSynthProviderInstance(PyObject *implementor);
 
   static bool
