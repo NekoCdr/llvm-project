@@ -30,8 +30,9 @@ def __lldb_init_module(debugger, internal_dict):
     #     "type summary add -F ClangDataFormat.QualType_summary clang::QualType"
     # )
 
-def test():
-    print("Hello World!")
+def test(qualty, internal_dict):
+    print("Called python ClangDataFormat.test()")
+    return qualty.GetTarget().GetBasicType(lldb.eBasicTypeInt)
 
 
 def SourceLocation_summary(srcloc, internal_dict):
