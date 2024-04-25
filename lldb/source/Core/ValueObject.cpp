@@ -1814,9 +1814,9 @@ void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
     
     UpdateFormatsIfNeeded();
     if (m_type_recognizer_sp.get() == nullptr)
-      return true;
-    if (current_type_recognizer_sp == m_type_recognizer_sp && m_dynamic_value)
       return false;
+    if (current_type_recognizer_sp == m_type_recognizer_sp && m_dynamic_value)
+      return true;
 
     ClearDynamicTypeInformation();
     m_dynamic_value;
