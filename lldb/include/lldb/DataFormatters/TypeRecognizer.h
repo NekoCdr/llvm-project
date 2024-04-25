@@ -13,6 +13,10 @@
 #include <memory>
 #include <string>
 
+#include "lldb/Core/Debugger.h"
+#include "lldb/Core/ValueObject.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
@@ -138,6 +142,35 @@ public:
   bool NonCacheable() const { return m_flags.GetNonCacheable(); }
 
   typedef std::shared_ptr<TypeRecognizerImpl> SharedPointer;
+
+  lldb::ValueObjectSP RecognizeObject(ValueObject *valobj) {
+    if (!valobj)
+      return nullptr;
+
+    lldb::TargetSP target_sp(valobj->GetTargetSP());
+
+    if (!target_sp)
+      return nullptr;
+
+    ScriptInterpreter *script_interpreter =
+        target_sp->GetDebugger().GetScriptInterpreter();
+
+    if (!script_interpreter)
+      return nullptr;
+
+    lldb::TypeImplSP type_impl_sp = script_interpreter->RecognizeType(
+        m_function_name.c_str(), valobj->GetSP());
+
+    if (!type_impl_sp)
+      return nullptr;
+
+    CompilerType ct = type_impl_sp->GetCompilerType(false);
+
+    if (!ct.IsValid())
+      return nullptr;
+
+    return valobj->DoCast(ct);
+  }
 
 private:
   uint32_t m_my_revision = 0;
