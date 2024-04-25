@@ -178,6 +178,60 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
   return true;
 }
 
+PythonObject
+lldb_private::python::SWIGBridge::LLDBSwigPythonCallRecognizerScript(
+    const char *p_function_name, const void *session_dictionary,
+    const lldb::ValueObjectSP &valobj_sp) {
+
+  if (!p_function_name || p_function_name[0] == '\0' || !session_dictionary) {
+    llvm::outs() << "LLDBSwigPythonCallRecognizerScript:5017\n";
+    return {};
+  }
+
+  PyErr_Cleaner py_err_cleaner(true); // show Python errors
+
+  PyObject *py_dict = (PyObject *)session_dictionary;
+  if (!PythonDictionary::Check(py_dict)) {
+    llvm::outs() << "LLDBSwigPythonCallRecognizerScript:5025\n";
+    return {};
+  }
+
+  PythonDictionary dict(PyRefType::Borrowed, py_dict);
+
+  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+      p_function_name, dict);
+
+  assert(PyFunction_Check(pfunc.get()));
+  if (!pfunc.IsAllocated()) {
+    llvm::outs() << "LLDBSwigPythonCallRecognizerScript:5036\n";
+    return {};
+  }
+
+  auto argc = pfunc.GetArgInfo();
+  if (!argc) {
+    llvm::consumeError(argc.takeError());
+    llvm::outs() << "LLDBSwigPythonCallRecognizerScript:5043\n";
+    return {};
+  }
+
+  auto sb_value = std::unique_ptr<lldb::SBValue>(new lldb::SBValue(valobj_sp));
+  sb_value->SetPreferSyntheticValue(false);
+
+  PythonObject val_arg = SWIGBridge::ToSWIGWrapper(std::move(sb_value));
+  if (!val_arg.IsAllocated()) {
+    llvm::outs() << "LLDBSwigPythonCallRecognizerScript:5052\n";
+    return {};
+  }
+
+  PythonObject result = pfunc(val_arg, dict);
+
+  if (result.IsAllocated())
+    return result;
+
+  llvm::outs() << "LLDBSwigPythonCallRecognizerScript:5061\n";
+  return {};
+}
+
 PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateSyntheticProvider(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::ValueObjectSP &valobj_sp) {

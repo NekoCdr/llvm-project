@@ -137,6 +137,11 @@ public:
       const lldb::ValueObjectSP &valobj_sp, void **pyfunct_wrapper,
       const lldb::TypeSummaryOptionsSP &options_sp, std::string &retval);
 
+  static PythonObject
+  LLDBSwigPythonCallRecognizerScript(const char *p_function_name,
+                                     const void *session_dictionary,
+                                     const lldb::ValueObjectSP &valobj_sp);
+
   static python::PythonObject
   LLDBSwigPythonCreateSyntheticProvider(const char *python_class_name,
                                         const char *session_dictionary_name,
