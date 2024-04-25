@@ -1819,7 +1819,12 @@ void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
       return true;
 
     ClearDynamicTypeInformation();
-    m_dynamic_value;
+    lldb::ValueObjectSP recognized_valobj =
+        m_type_recognizer_sp->RecognizeObject(this);
+
+    if (recognized_valobj != nullptr) {
+      // TODO: create new dynamic value and assign it to m_dynamic_value
+    }
 
     return true;
   };
