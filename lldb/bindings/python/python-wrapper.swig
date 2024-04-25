@@ -208,7 +208,7 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonCallRecognizerScript(
   }
 
   auto sb_value = std::unique_ptr<lldb::SBValue>(new lldb::SBValue(valobj_sp));
-  sb_value->SetPreferSyntheticValue(false);
+  sb_value->SetPreferDynamicValue(lldb::eNoDynamicValues);
 
   PythonObject val_arg = SWIGBridge::ToSWIGWrapper(std::move(sb_value));
   if (!val_arg.IsAllocated())

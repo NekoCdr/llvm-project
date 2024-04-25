@@ -32,7 +32,7 @@ def __lldb_init_module(debugger, internal_dict):
 
 def test(qualty, internal_dict):
     print("Called python ClangDataFormat.test()")
-    return qualty.GetTarget().GetBasicType(lldb.eBasicTypeInt)
+    return qualty.GetType()
 
 
 def SourceLocation_summary(srcloc, internal_dict):
