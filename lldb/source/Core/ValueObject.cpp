@@ -1809,9 +1809,9 @@ void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
 
   // Returns boolean that indicates whether we should proceed with the default
   // vtable-based method.
-  auto try_type_recognizer = [&] () -> bool {
+  auto try_type_recognizer = [&]() -> bool {
     lldb::TypeRecognizerImplSP current_type_recognizer_sp(m_type_recognizer_sp);
-    
+
     UpdateFormatsIfNeeded();
     if (m_type_recognizer_sp.get() == nullptr)
       return false;
