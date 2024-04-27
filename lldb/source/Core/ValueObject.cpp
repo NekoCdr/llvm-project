@@ -16,6 +16,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/Core/ValueObjectRecognizedValue.h"
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
 #include "lldb/Core/ValueObjectVTable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -1819,12 +1820,7 @@ void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
       return true;
 
     ClearDynamicTypeInformation();
-    lldb::ValueObjectSP recognized_valobj =
-        m_type_recognizer_sp->RecognizeObject(this);
-
-    if (recognized_valobj != nullptr) {
-      // TODO: create new dynamic value and assign it to m_dynamic_value
-    }
+    m_dynamic_value = new ValueObjectRecognizedValue(*this, use_dynamic);
 
     return true;
   };
