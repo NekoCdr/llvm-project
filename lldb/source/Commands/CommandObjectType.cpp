@@ -2253,6 +2253,16 @@ public:
             "Delete all existing synthetic providers.") {}
 };
 
+// CommandObjectTypeRecognizerClear
+
+class CommandObjectTypeRecognizerClear : public CommandObjectTypeFormatterClear {
+public:
+  CommandObjectTypeRecognizerClear(CommandInterpreter &interpreter)
+      : CommandObjectTypeFormatterClear(
+            interpreter, eFormatCategoryItemRecognizer, "type recognizer clear",
+            "Delete all existing recognizer providers.") {}
+};
+
 bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
     Args &command, CommandReturnObject &result) {
   auto options = std::make_unique<SynthAddOptions>(
@@ -3047,6 +3057,8 @@ public:
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTypeRecognizerAdd(interpreter)));
     LoadSubCommand(
+        "clear", CommandObjectSP(new CommandObjectTypeRecognizerClear(interpreter)));
+    LoadSubCommand(
         "list", CommandObjectSP(new CommandObjectTypeRecognizerList(interpreter)));
     LoadSubCommand(
         "info",
@@ -3055,8 +3067,6 @@ public:
             [](ValueObject &valobj) -> TypeRecognizerImpl::SharedPointer {
               return valobj.GetTypeRecognizer();
             })));
-  //   LoadSubCommand("clear", CommandObjectSP(new CommandObjectTypeSummaryClear(
-  //                               interpreter)));
   //   LoadSubCommand("delete", CommandObjectSP(new CommandObjectTypeSummaryDelete(
   //                                interpreter)));
   }
