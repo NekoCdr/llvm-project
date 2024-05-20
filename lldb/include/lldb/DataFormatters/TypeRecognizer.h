@@ -141,6 +141,16 @@ public:
 
   bool NonCacheable() const { return m_flags.GetNonCacheable(); }
 
+  std::string GetDescription() {
+    StreamString sstr;
+    sstr.Printf("%s%s%s Python function %s", Cascades() ? "" : " (not cascading)",
+                SkipsPointers() ? " (skip pointers)" : "",
+                SkipsReferences() ? " (skip references)" : "",
+                m_function_name.c_str());
+
+    return std::string(sstr.GetString());
+  }
+
   typedef std::shared_ptr<TypeRecognizerImpl> SharedPointer;
 
   lldb::ValueObjectSP RecognizeObject(ValueObject *valobj) {
