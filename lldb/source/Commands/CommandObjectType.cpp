@@ -12,6 +12,7 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormatClasses.h"
+#include "lldb/DataFormatters/TypeRecognizer.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
