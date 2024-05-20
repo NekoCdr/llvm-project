@@ -33,6 +33,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/STLExtras.h"
 
