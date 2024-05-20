@@ -3035,18 +3035,19 @@ public:
             "type summary [<sub-command-options>] ") {
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTypeRecognizerAdd(interpreter)));
+    LoadSubCommand(
+        "info",
+        CommandObjectSP(new CommandObjectFormatterInfo<TypeRecognizerImpl>(
+            interpreter, "recognizer",
+            [](ValueObject &valobj) -> TypeRecognizerImpl::SharedPointer {
+              return valobj.GetTypeRecognizer();
+            })));
   //   LoadSubCommand("clear", CommandObjectSP(new CommandObjectTypeSummaryClear(
   //                               interpreter)));
   //   LoadSubCommand("delete", CommandObjectSP(new CommandObjectTypeSummaryDelete(
   //                                interpreter)));
   //   LoadSubCommand(
   //       "list", CommandObjectSP(new CommandObjectTypeSummaryList(interpreter)));
-  //   LoadSubCommand(
-  //       "info", CommandObjectSP(new CommandObjectFormatterInfo<TypeSummaryImpl>(
-  //                   interpreter, "summary",
-  //                   [](ValueObject &valobj) -> TypeSummaryImpl::SharedPointer {
-  //                     return valobj.GetSummaryFormat();
-  //                   })));
   }
 
   ~CommandObjectTypeRecognizer() override = default;
