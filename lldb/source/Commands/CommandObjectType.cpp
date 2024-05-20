@@ -2232,6 +2232,17 @@ public:
   ~CommandObjectTypeSynthDelete() override = default;
 };
 
+// CommandObjectTypeRecognizerDelete
+
+class CommandObjectTypeRecognizerDelete : public CommandObjectTypeFormatterDelete {
+public:
+  CommandObjectTypeRecognizerDelete(CommandInterpreter &interpreter)
+      : CommandObjectTypeFormatterDelete(
+            interpreter, eFormatCategoryItemRecognizer) {}
+
+  ~CommandObjectTypeRecognizerDelete() override = default;
+};
+
 
 // CommandObjectTypeFilterClear
 
@@ -3058,6 +3069,8 @@ public:
         "add", CommandObjectSP(new CommandObjectTypeRecognizerAdd(interpreter)));
     LoadSubCommand(
         "clear", CommandObjectSP(new CommandObjectTypeRecognizerClear(interpreter)));
+    LoadSubCommand("delete", CommandObjectSP(new CommandObjectTypeRecognizerDelete(
+                                 interpreter)));
     LoadSubCommand(
         "list", CommandObjectSP(new CommandObjectTypeRecognizerList(interpreter)));
     LoadSubCommand(
@@ -3067,8 +3080,6 @@ public:
             [](ValueObject &valobj) -> TypeRecognizerImpl::SharedPointer {
               return valobj.GetTypeRecognizer();
             })));
-  //   LoadSubCommand("delete", CommandObjectSP(new CommandObjectTypeSummaryDelete(
-  //                                interpreter)));
   }
 
   ~CommandObjectTypeRecognizer() override = default;
