@@ -2199,6 +2199,17 @@ public:
             "Show a list of current synthetic providers.") {}
 };
 
+// CommandObjectTypeRecognizerList
+
+class CommandObjectTypeRecognizerList
+    : public CommandObjectTypeFormatterList<TypeRecognizerImpl> {
+public:
+  CommandObjectTypeRecognizerList(CommandInterpreter &interpreter)
+      : CommandObjectTypeFormatterList(
+            interpreter, "type recognizer list",
+            "Show a list of current recognizer providers.") {}
+};
+
 // CommandObjectTypeFilterDelete
 
 class CommandObjectTypeFilterDelete : public CommandObjectTypeFormatterDelete {
@@ -3036,6 +3047,8 @@ public:
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTypeRecognizerAdd(interpreter)));
     LoadSubCommand(
+        "list", CommandObjectSP(new CommandObjectTypeRecognizerList(interpreter)));
+    LoadSubCommand(
         "info",
         CommandObjectSP(new CommandObjectFormatterInfo<TypeRecognizerImpl>(
             interpreter, "recognizer",
@@ -3046,8 +3059,6 @@ public:
   //                               interpreter)));
   //   LoadSubCommand("delete", CommandObjectSP(new CommandObjectTypeSummaryDelete(
   //                                interpreter)));
-  //   LoadSubCommand(
-  //       "list", CommandObjectSP(new CommandObjectTypeSummaryList(interpreter)));
   }
 
   ~CommandObjectTypeRecognizer() override = default;
