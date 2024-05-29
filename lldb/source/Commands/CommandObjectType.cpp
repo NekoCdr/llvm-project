@@ -1680,6 +1680,9 @@ private:
       case 'F':
         m_python_function = std::string(option_arg);
         break;
+      case 'w':
+        m_category = std::string(option_arg);
+        break;
       case 'x':
         if (m_match_type == eFormatterMatchCallback)
           error.SetErrorString(
@@ -1702,6 +1705,7 @@ private:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_category = "default";
       m_match_type = eFormatterMatchRegex;
       m_python_function = "";
     }
@@ -1711,6 +1715,7 @@ private:
     }
 
     TypeRecognizerImpl::Flags m_flags;
+    std::string m_category;
     FormatterMatchType m_match_type;
     std::string m_python_function;
   };
@@ -1736,9 +1741,9 @@ public:
 
   ~CommandObjectTypeRecognizerAdd() override = default;
 
-  void AddTypeRecognizer(ConstString type_name, TypeRecognizerImplSP entry, FormatterMatchType match_type, Status *error) {
+  void AddTypeRecognizer(ConstString type_name, TypeRecognizerImplSP entry, FormatterMatchType match_type, std::string category_name, Status *error) {
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(ConstString("default"), category);
+    DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()), category);
 
     if (match_type == eFormatterMatchRegex) {
       RegularExpression typeRX(type_name.GetStringRef());
@@ -1788,10 +1793,14 @@ protected:
     // if I am here, script_format must point to something good, so I can add
     // that as a dynamic type recognizer to all interested parties
 
+    lldb::TypeCategoryImplSP category;
+    DataVisualization::Categories::GetCategory(
+        ConstString(m_options.m_category.c_str()), category);
+
     Status error;
 
     for (auto &entry : command.entries()) {
-      AddTypeRecognizer(ConstString(entry.ref()), script_recognizer, m_options.m_match_type, &error);
+      AddTypeRecognizer(ConstString(entry.ref()), script_recognizer, m_options.m_match_type, m_options.m_category, &error);
       if (error.Fail()) {
         result.AppendError(error.AsCString());
         return;
