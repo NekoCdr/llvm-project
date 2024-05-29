@@ -1349,6 +1349,12 @@ let Command = "type lookup" in {
 }
 
 let Command = "type recognizer add" in {
+  def type_recognizer_add_cascade : Option<"cascade", "C">, Arg<"Boolean">,
+    Desc<"If true, cascade through typedef chains.">;
+  def type_recognizer_add_skip_pointers : Option<"skip-pointers", "p">,
+    Desc<"Don't use this format for pointers-to-type objects.">;
+  def type_recognizer_add_skip_references : Option<"skip-references", "r">,
+    Desc<"Don't use this format for references-to-type objects.">;
   def type_recognizer_add_category : Option<"category", "w">, Arg<"Name">,
     Desc<"Add this to the given category instead of the default one.">;
   def type_recognizer_add_regex : Option<"regex", "x">,

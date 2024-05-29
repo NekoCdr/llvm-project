@@ -43,10 +43,10 @@ public:
       return *this;
     }
 
-    // Flags &Clear() {
-    //   m_flags = 0;
-    //   return *this;
-    // }
+    Flags &Clear() {
+      m_flags = 0;
+      return *this;
+    }
 
     bool GetCascades() const {
       return (m_flags & lldb::eTypeOptionCascade) == lldb::eTypeOptionCascade;

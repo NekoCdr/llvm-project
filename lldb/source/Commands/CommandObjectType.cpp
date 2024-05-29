@@ -1675,13 +1675,27 @@ private:
                           ExecutionContext *execution_context) override {
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
-      // bool success;
+      bool success;
+
       switch (short_option) {
+      case 'C':
+        m_flags.SetCascades(
+            OptionArgParser::ToBoolean(option_arg, true, &success));
+        if (!success)
+          error.SetErrorStringWithFormat("invalid value for cascade: %s",
+                                         option_arg.str().c_str());
+        break;
       case 'F':
         m_python_function = std::string(option_arg);
         break;
       case 'w':
         m_category = std::string(option_arg);
+        break;
+      case 'p':
+        m_flags.SetSkipPointers(true);
+        break;
+      case 'r':
+        m_flags.SetSkipReferences(true);
         break;
       case 'x':
         if (m_match_type == eFormatterMatchCallback)
@@ -1705,6 +1719,9 @@ private:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_flags.Clear().SetCascades().SetSkipPointers(false).SetSkipReferences(
+          false);
+
       m_category = "default";
       m_match_type = eFormatterMatchRegex;
       m_python_function = "";
@@ -1755,7 +1772,7 @@ public:
     }
 
     category->AddTypeRecognizer(type_name.GetStringRef(), match_type, entry);
-  } 
+  }
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
