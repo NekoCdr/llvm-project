@@ -1824,6 +1824,7 @@ protected:
       }
     }
 
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return;
   }
 };
