@@ -78,6 +78,20 @@ public:
   typedef std::shared_ptr<SynthAddOptions> SharedPointer;
 };
 
+class TypeRecognizerAddOptions {
+public:
+  TypeRecognizerImpl::Flags m_flags;
+  FormatterMatchType m_match_type;
+  StringList m_target_types;
+  std::string m_category;
+
+  TypeRecognizerAddOptions(TypeRecognizerImpl::Flags flags,
+                           FormatterMatchType match_type, std::string catg)
+      : m_flags(flags), m_match_type(match_type), m_category(catg) {}
+
+  typedef std::shared_ptr<TypeRecognizerAddOptions> SharedPointer;
+};
+
 static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
                                                 CommandReturnObject &result) {
   if (command.empty())
@@ -1664,7 +1678,7 @@ protected:
 #define LLDB_OPTIONS_type_recognizer_add
 #include "CommandOptions.inc"
 
-class CommandObjectTypeRecognizerAdd : public CommandObjectParsed {
+class CommandObjectTypeRecognizerAdd : public CommandObjectParsed, public IOHandlerDelegateMultiline {
 private:
   class CommandOptions : public Options {
   public:
@@ -1685,8 +1699,12 @@ private:
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_arg.str().c_str());
         break;
+      case 'P':
+        handwrite_python = true;
+        break;
       case 'F':
         m_python_function = std::string(option_arg);
+        is_function_based = true;
         break;
       case 'w':
         m_category = std::string(option_arg);
@@ -1725,6 +1743,8 @@ private:
       m_category = "default";
       m_match_type = eFormatterMatchRegex;
       m_python_function = "";
+      handwrite_python = false;
+      is_function_based = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1735,6 +1755,8 @@ private:
     std::string m_category;
     FormatterMatchType m_match_type;
     std::string m_python_function;
+    bool handwrite_python;
+    bool is_function_based;
   };
 
   CommandOptions m_options;
@@ -1744,6 +1766,7 @@ private:
 public:
   CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter)
   : CommandObjectParsed(interpreter, "type recognizer add", "Add new dynamic type recognizer for a type."),
+    IOHandlerDelegateMultiline("DONE"), 
     m_options(interpreter) {
       CommandArgumentEntry type_arg;
       CommandArgumentData type_style_arg;
@@ -1778,6 +1801,136 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
+    if (m_options.handwrite_python)
+      Execute_HandwritePython(command, result);
+    else if (m_options.is_function_based)
+      Execute_PythonFunction(command, result);
+    else {
+      result.AppendError("must either provide a children list, a Python class "
+                         "name, or use -P and type a Python function "
+                         "line-by-line");
+    }
+  }
+
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
+    static const char *g_type_recognizer_addreader_instructions =
+        "Enter your Python command(s). Type 'DONE' to end.\n"
+        "def function (valobj,internal_dict):\n"
+        "     \"\"\"valobj: an SBValue which you want to provide a summary "
+        "for\n"
+        "        internal_dict: an LLDB support object not to be used\"\"\"\n";
+
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+    if (output_sp && interactive) {
+      output_sp->PutCString(g_type_recognizer_addreader_instructions);
+      output_sp->Flush();
+    }
+  }
+
+  void IOHandlerInputComplete(IOHandler &io_handler,
+                              std::string &data) override {
+    StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
+
+#if LLDB_ENABLE_PYTHON
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
+    if (interpreter) {
+      StringList lines;
+      lines.SplitIntoLines(data);
+      if (lines.GetSize() > 0) {
+        TypeRecognizerAddOptions *options_ptr =
+            ((TypeRecognizerAddOptions *)io_handler.GetUserData());
+        if (options_ptr) {
+          TypeRecognizerAddOptions::SharedPointer options(
+              options_ptr); // this will ensure that we get rid of the pointer
+                            // when going out of scope
+
+          ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
+          if (interpreter) {
+            std::string funct_name_str;
+            if (interpreter->GenerateTypeScriptFunction(lines,
+                                                        funct_name_str)) {
+              if (funct_name_str.empty()) {
+                error_sp->Printf("unable to obtain a valid function name from "
+                                 "the script interpreter.\n");
+                error_sp->Flush();
+              } else {
+                // now I have a valid function name, let's add this as script
+                // for every type in the list
+
+                TypeRecognizerImplSP script_recognizer;
+                script_recognizer = std::make_shared<TypeRecognizerImpl>(
+                    options->m_flags, funct_name_str.c_str(),
+                    lines.CopyList("    ").c_str());
+
+                Status error;
+
+                for (const std::string &type_name : options->m_target_types) {
+                  if (!type_name.empty()) {
+                    AddTypeRecognizer(ConstString(type_name), script_recognizer,
+                                      options->m_match_type,
+                                      options->m_category, &error);
+                    if (error.Fail()) {
+                      error_sp->Printf("error: %s\n", error.AsCString());
+                      error_sp->Flush();
+                      break;
+                    };
+                  } else {
+                    error_sp->Printf("error: invalid type name.\n");
+                    error_sp->Flush();
+                    break;
+                  }
+                }
+              }
+            } else {
+              error_sp->Printf("error: unable to generate a function.\n");
+              error_sp->Flush();
+            }
+          } else {
+            error_sp->Printf("error: no script interpreter.\n");
+            error_sp->Flush();
+          }
+        } else {
+          error_sp->Printf("error: internal synchronization information "
+                           "missing or invalid.\n");
+          error_sp->Flush();
+        }
+      } else {
+        error_sp->Printf("error: empty function, didn't add python command.\n");
+        error_sp->Flush();
+      }
+    } else {
+      error_sp->Printf(
+          "error: script interpreter missing, didn't add python command.\n");
+      error_sp->Flush();
+    }
+#endif
+    io_handler.SetIsDone(true);
+  }
+
+private:
+  bool Execute_HandwritePython(Args &command, CommandReturnObject &result) {
+    auto options = std::make_unique<TypeRecognizerAddOptions>(
+        m_options.m_flags, m_options.m_match_type, m_options.m_category);
+
+    for (auto &entry : command.entries()) {
+      if (entry.ref().empty()) {
+        result.AppendError("empty typenames not allowed");
+        return false;
+      }
+
+      options->m_target_types << std::string(entry.ref());
+    }
+
+    m_interpreter.GetPythonCommandsFromIOHandler(
+        "    ",             // Prompt
+        *this,              // IOHandlerDelegate
+        options.release()); // Baton for the "io_handler" that will be passed
+                            // back into our IOHandlerDelegate functions
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return result.Succeeded();
+  }
+
+  void Execute_PythonFunction(Args &command, CommandReturnObject &result) {
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {

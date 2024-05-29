@@ -1357,6 +1357,8 @@ let Command = "type recognizer add" in {
     Desc<"Don't use this format for references-to-type objects.">;
   def type_recognizer_add_category : Option<"category", "w">, Arg<"Name">,
     Desc<"Add this to the given category instead of the default one.">;
+  def type_recognizer_add_input_python : Option<"input-python", "P">, Group<3>,
+    Desc<"Type Python code to generate a function that recognize type.">;
   def type_recognizer_add_regex : Option<"regex", "x">,
     Desc<"Type names are actually regular expressions.">;
   def type_recognizer_add_recognizer_function :
