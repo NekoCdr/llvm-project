@@ -1681,7 +1681,18 @@ private:
         m_python_function = std::string(option_arg);
         break;
       case 'x':
-        m_match_type = eFormatterMatchRegex;
+        if (m_match_type == eFormatterMatchCallback)
+          error.SetErrorString(
+              "can't use --regex and --recognizer-function at the same time");
+        else
+          m_match_type = eFormatterMatchRegex;
+        break;
+      case '\x01':
+        if (m_match_type == eFormatterMatchRegex)
+          error.SetErrorString(
+              "can't use --regex and --recognizer-function at the same time");
+        else
+          m_match_type = eFormatterMatchCallback;
         break;
       default:
         llvm_unreachable("Unimplemented option");

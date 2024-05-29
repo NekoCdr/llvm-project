@@ -1351,6 +1351,11 @@ let Command = "type lookup" in {
 let Command = "type recognizer add" in {
   def type_recognizer_add_regex : Option<"regex", "x">,
     Desc<"Type names are actually regular expressions.">;
+  def type_recognizer_add_recognizer_function :
+    Option<"recognizer-function", "\\x01">,
+    Desc<"The names in the argument list are actually the names of python "
+    "functions that decide whether to use this summary for any given type. "
+    "Cannot be specified at the same time as --regex (-x).">;
   def type_recognizer_add_python_function : Option<"python-function", "F">,
     Arg<"PythonFunction">,
     Desc<"Give the name of a Python function to use for this type.">;
