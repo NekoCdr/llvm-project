@@ -542,9 +542,7 @@ private:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_type_recognizer_add_options);
-    }
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
     TypeRecognizerImpl::Flags m_flags;
     std::string m_category;
@@ -2426,6 +2424,11 @@ void CommandObjectTypeRecognizerAdd::CommandOptions::OptionParsingStarting(
   m_python_function = "";
   handwrite_python = false;
   is_function_based = false;
+}
+
+llvm::ArrayRef<OptionDefinition>
+CommandObjectTypeRecognizerAdd::CommandOptions::GetDefinitions() {
+  return llvm::ArrayRef(g_type_recognizer_add_options);
 }
 
 bool CommandObjectTypeRecognizerAdd::Execute_HandwritePython(
