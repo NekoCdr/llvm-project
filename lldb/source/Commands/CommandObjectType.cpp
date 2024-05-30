@@ -538,55 +538,7 @@ private:
     ~CommandOptions() override = default;
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
-      const int short_option = m_getopt_table[option_idx].val;
-      bool success;
-
-      switch (short_option) {
-      case 'C':
-        m_flags.SetCascades(
-            OptionArgParser::ToBoolean(option_arg, true, &success));
-        if (!success)
-          error.SetErrorStringWithFormat("invalid value for cascade: %s",
-                                         option_arg.str().c_str());
-        break;
-      case 'P':
-        handwrite_python = true;
-        break;
-      case 'F':
-        m_python_function = std::string(option_arg);
-        is_function_based = true;
-        break;
-      case 'w':
-        m_category = std::string(option_arg);
-        break;
-      case 'p':
-        m_flags.SetSkipPointers(true);
-        break;
-      case 'r':
-        m_flags.SetSkipReferences(true);
-        break;
-      case 'x':
-        if (m_match_type == eFormatterMatchCallback)
-          error.SetErrorString(
-              "can't use --regex and --recognizer-function at the same time");
-        else
-          m_match_type = eFormatterMatchRegex;
-        break;
-      case '\x01':
-        if (m_match_type == eFormatterMatchRegex)
-          error.SetErrorString(
-              "can't use --regex and --recognizer-function at the same time");
-        else
-          m_match_type = eFormatterMatchCallback;
-        break;
-      default:
-        llvm_unreachable("Unimplemented option");
-      }
-
-      return error;
-    }
+                          ExecutionContext *execution_context) override;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_flags.Clear().SetCascades().SetSkipPointers(false).SetSkipReferences(
@@ -2421,6 +2373,57 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
 
   category->AddTypeSynthetic(type_name.GetStringRef(), match_type, entry);
   return true;
+}
+
+Status CommandObjectTypeRecognizerAdd::CommandOptions::SetOptionValue(
+    uint32_t option_idx, llvm::StringRef option_arg,
+    ExecutionContext *execution_context) {
+  Status error;
+  const int short_option = m_getopt_table[option_idx].val;
+  bool success;
+
+  switch (short_option) {
+  case 'C':
+    m_flags.SetCascades(OptionArgParser::ToBoolean(option_arg, true, &success));
+    if (!success)
+      error.SetErrorStringWithFormat("invalid value for cascade: %s",
+                                     option_arg.str().c_str());
+    break;
+  case 'P':
+    handwrite_python = true;
+    break;
+  case 'F':
+    m_python_function = std::string(option_arg);
+    is_function_based = true;
+    break;
+  case 'w':
+    m_category = std::string(option_arg);
+    break;
+  case 'p':
+    m_flags.SetSkipPointers(true);
+    break;
+  case 'r':
+    m_flags.SetSkipReferences(true);
+    break;
+  case 'x':
+    if (m_match_type == eFormatterMatchCallback)
+      error.SetErrorString(
+          "can't use --regex and --recognizer-function at the same time");
+    else
+      m_match_type = eFormatterMatchRegex;
+    break;
+  case '\x01':
+    if (m_match_type == eFormatterMatchRegex)
+      error.SetErrorString(
+          "can't use --regex and --recognizer-function at the same time");
+    else
+      m_match_type = eFormatterMatchCallback;
+    break;
+  default:
+    llvm_unreachable("Unimplemented option");
+  }
+
+  return error;
 }
 
 bool CommandObjectTypeRecognizerAdd::Execute_HandwritePython(
