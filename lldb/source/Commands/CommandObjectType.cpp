@@ -625,84 +625,7 @@ protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
-                              std::string &data) override {
-    StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
-
-#if LLDB_ENABLE_PYTHON
-    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-    if (interpreter) {
-      StringList lines;
-      lines.SplitIntoLines(data);
-      if (lines.GetSize() > 0) {
-        TypeRecognizerAddOptions *options_ptr =
-            ((TypeRecognizerAddOptions *)io_handler.GetUserData());
-        if (options_ptr) {
-          TypeRecognizerAddOptions::SharedPointer options(
-              options_ptr); // this will ensure that we get rid of the pointer
-                            // when going out of scope
-
-          ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-          if (interpreter) {
-            std::string funct_name_str;
-            if (interpreter->GenerateTypeScriptFunction(lines,
-                                                        funct_name_str)) {
-              if (funct_name_str.empty()) {
-                error_sp->Printf("unable to obtain a valid function name from "
-                                 "the script interpreter.\n");
-                error_sp->Flush();
-              } else {
-                // now I have a valid function name, let's add this as script
-                // for every type in the list
-
-                TypeRecognizerImplSP script_recognizer;
-                script_recognizer = std::make_shared<TypeRecognizerImpl>(
-                    options->m_flags, funct_name_str.c_str(),
-                    lines.CopyList("    ").c_str());
-
-                Status error;
-
-                for (const std::string &type_name : options->m_target_types) {
-                  if (!type_name.empty()) {
-                    AddTypeRecognizer(ConstString(type_name), script_recognizer,
-                                      options->m_match_type,
-                                      options->m_category, &error);
-                    if (error.Fail()) {
-                      error_sp->Printf("error: %s\n", error.AsCString());
-                      error_sp->Flush();
-                      break;
-                    };
-                  } else {
-                    error_sp->Printf("error: invalid type name.\n");
-                    error_sp->Flush();
-                    break;
-                  }
-                }
-              }
-            } else {
-              error_sp->Printf("error: unable to generate a function.\n");
-              error_sp->Flush();
-            }
-          } else {
-            error_sp->Printf("error: no script interpreter.\n");
-            error_sp->Flush();
-          }
-        } else {
-          error_sp->Printf("error: internal synchronization information "
-                           "missing or invalid.\n");
-          error_sp->Flush();
-        }
-      } else {
-        error_sp->Printf("error: empty function, didn't add python command.\n");
-        error_sp->Flush();
-      }
-    } else {
-      error_sp->Printf(
-          "error: script interpreter missing, didn't add python command.\n");
-      error_sp->Flush();
-    }
-#endif
-    io_handler.SetIsDone(true);
-  }
+                              std::string &data) override;
 
 public:
   CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter);
@@ -2609,6 +2532,85 @@ void CommandObjectTypeRecognizerAdd::IOHandlerActivated(IOHandler &io_handler,
     output_sp->PutCString(g_type_recognizer_addreader_instructions);
     output_sp->Flush();
   }
+}
+
+void CommandObjectTypeRecognizerAdd::IOHandlerInputComplete(
+    IOHandler &io_handler, std::string &data) {
+  StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
+
+#if LLDB_ENABLE_PYTHON
+  ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
+  if (interpreter) {
+    StringList lines;
+    lines.SplitIntoLines(data);
+    if (lines.GetSize() > 0) {
+      TypeRecognizerAddOptions *options_ptr =
+          ((TypeRecognizerAddOptions *)io_handler.GetUserData());
+      if (options_ptr) {
+        TypeRecognizerAddOptions::SharedPointer options(
+            options_ptr); // this will ensure that we get rid of the pointer
+                          // when going out of scope
+
+        ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
+        if (interpreter) {
+          std::string funct_name_str;
+          if (interpreter->GenerateTypeScriptFunction(lines, funct_name_str)) {
+            if (funct_name_str.empty()) {
+              error_sp->Printf("unable to obtain a valid function name from "
+                               "the script interpreter.\n");
+              error_sp->Flush();
+            } else {
+              // now I have a valid function name, let's add this as script
+              // for every type in the list
+
+              TypeRecognizerImplSP script_recognizer;
+              script_recognizer = std::make_shared<TypeRecognizerImpl>(
+                  options->m_flags, funct_name_str.c_str(),
+                  lines.CopyList("    ").c_str());
+
+              Status error;
+
+              for (const std::string &type_name : options->m_target_types) {
+                if (!type_name.empty()) {
+                  AddTypeRecognizer(ConstString(type_name), script_recognizer,
+                                    options->m_match_type, options->m_category,
+                                    &error);
+                  if (error.Fail()) {
+                    error_sp->Printf("error: %s\n", error.AsCString());
+                    error_sp->Flush();
+                    break;
+                  };
+                } else {
+                  error_sp->Printf("error: invalid type name.\n");
+                  error_sp->Flush();
+                  break;
+                }
+              }
+            }
+          } else {
+            error_sp->Printf("error: unable to generate a function.\n");
+            error_sp->Flush();
+          }
+        } else {
+          error_sp->Printf("error: no script interpreter.\n");
+          error_sp->Flush();
+        }
+      } else {
+        error_sp->Printf("error: internal synchronization information "
+                         "missing or invalid.\n");
+        error_sp->Flush();
+      }
+    } else {
+      error_sp->Printf("error: empty function, didn't add python command.\n");
+      error_sp->Flush();
+    }
+  } else {
+    error_sp->Printf(
+        "error: script interpreter missing, didn't add python command.\n");
+    error_sp->Flush();
+  }
+#endif
+  io_handler.SetIsDone(true);
 }
 
 CommandObjectTypeRecognizerAdd::CommandObjectTypeRecognizerAdd(
