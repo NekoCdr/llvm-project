@@ -765,27 +765,7 @@ protected:
   }
 
 private:
-  bool Execute_HandwritePython(Args &command, CommandReturnObject &result) {
-    auto options = std::make_unique<TypeRecognizerAddOptions>(
-        m_options.m_flags, m_options.m_match_type, m_options.m_category);
-
-    for (auto &entry : command.entries()) {
-      if (entry.ref().empty()) {
-        result.AppendError("empty typenames not allowed");
-        return false;
-      }
-
-      options->m_target_types << std::string(entry.ref());
-    }
-
-    m_interpreter.GetPythonCommandsFromIOHandler(
-        "    ",             // Prompt
-        *this,              // IOHandlerDelegate
-        options.release()); // Baton for the "io_handler" that will be passed
-                            // back into our IOHandlerDelegate functions
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    return result.Succeeded();
-  }
+  bool Execute_HandwritePython(Args &command, CommandReturnObject &result);
 
   void Execute_PythonFunction(Args &command, CommandReturnObject &result) {
     const size_t argc = command.GetArgumentCount();
@@ -2628,6 +2608,29 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
 
   category->AddTypeSynthetic(type_name.GetStringRef(), match_type, entry);
   return true;
+}
+
+bool CommandObjectTypeRecognizerAdd::Execute_HandwritePython(
+    Args &command, CommandReturnObject &result) {
+  auto options = std::make_unique<TypeRecognizerAddOptions>(
+      m_options.m_flags, m_options.m_match_type, m_options.m_category);
+
+  for (auto &entry : command.entries()) {
+    if (entry.ref().empty()) {
+      result.AppendError("empty typenames not allowed");
+      return false;
+    }
+
+    options->m_target_types << std::string(entry.ref());
+  }
+
+  m_interpreter.GetPythonCommandsFromIOHandler(
+      "    ",             // Prompt
+      *this,              // IOHandlerDelegate
+      options.release()); // Baton for the "io_handler" that will be passed
+                          // back into our IOHandlerDelegate functions
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  return result.Succeeded();
 }
 
 #define LLDB_OPTIONS_type_filter_add
