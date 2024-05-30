@@ -1678,7 +1678,8 @@ protected:
 #define LLDB_OPTIONS_type_recognizer_add
 #include "CommandOptions.inc"
 
-class CommandObjectTypeRecognizerAdd : public CommandObjectParsed, public IOHandlerDelegateMultiline {
+class CommandObjectTypeRecognizerAdd : public CommandObjectParsed,
+                                       public IOHandlerDelegateMultiline {
 private:
   class CommandOptions : public Options {
   public:
@@ -1765,31 +1766,36 @@ private:
 
 public:
   CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter)
-  : CommandObjectParsed(interpreter, "type recognizer add", "Add new dynamic type recognizer for a type."),
-    IOHandlerDelegateMultiline("DONE"), 
-    m_options(interpreter) {
-      CommandArgumentEntry type_arg;
-      CommandArgumentData type_style_arg;
+      : CommandObjectParsed(interpreter, "type recognizer add",
+                            "Add new dynamic type recognizer for a type."),
+        IOHandlerDelegateMultiline("DONE"), m_options(interpreter) {
+    CommandArgumentEntry type_arg;
+    CommandArgumentData type_style_arg;
 
-      type_style_arg.arg_type = eArgTypeName;
-      type_style_arg.arg_repetition = eArgRepeatPlus;
+    type_style_arg.arg_type = eArgTypeName;
+    type_style_arg.arg_repetition = eArgRepeatPlus;
 
-      type_arg.push_back(type_style_arg);
+    type_arg.push_back(type_style_arg);
 
-      m_arguments.push_back(type_arg);
-    }
+    m_arguments.push_back(type_arg);
+  }
 
   ~CommandObjectTypeRecognizerAdd() override = default;
 
-  void AddTypeRecognizer(ConstString type_name, TypeRecognizerImplSP entry, FormatterMatchType match_type, std::string category_name, Status *error) {
+  void AddTypeRecognizer(ConstString type_name, TypeRecognizerImplSP entry,
+                         FormatterMatchType match_type,
+                         std::string category_name, Status *error) {
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()), category);
+    DataVisualization::Categories::GetCategory(
+        ConstString(category_name.c_str()), category);
 
     if (match_type == eFormatterMatchRegex) {
       RegularExpression typeRX(type_name.GetStringRef());
       if (!typeRX.IsValid()) {
-        if (error)
-          error->SetErrorString("regex format error (maybe this is not really a regex?)");
+        if (error) {
+          error->SetErrorString(
+              "regex format error (maybe this is not really a regex?)");
+        }
         return;
       }
     }
@@ -1801,11 +1807,11 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
-    if (m_options.handwrite_python)
+    if (m_options.handwrite_python) {
       Execute_HandwritePython(command, result);
-    else if (m_options.is_function_based)
+    } else if (m_options.is_function_based) {
       Execute_PythonFunction(command, result);
-    else {
+    } else {
       result.AppendError("must either provide a children list, a Python class "
                          "name, or use -P and type a Python function "
                          "line-by-line");
@@ -1934,13 +1940,15 @@ private:
     const size_t argc = command.GetArgumentCount();
 
     if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes one or more args.\n", m_cmd_name.c_str());
+      result.AppendErrorWithFormat("%s takes one or more args.\n",
+                                   m_cmd_name.c_str());
       return;
     }
 
     TypeRecognizerImplSP script_recognizer;
 
-    if (!m_options.m_python_function.empty()) { // we have a Python function ready to use
+    // we have a Python function ready to use
+    if (!m_options.m_python_function.empty()) {
       const char *funct_name = m_options.m_python_function.c_str();
       if (!funct_name || !funct_name[0]) {
         result.AppendError("function name empty.\n");
@@ -1948,16 +1956,18 @@ private:
       }
 
       std::string code =
-        ("    " + m_options.m_python_function + "(valobj,internal_dict)");
-      script_recognizer = std::make_shared<TypeRecognizerImpl>(m_options.m_flags, funct_name, code.c_str());
+          ("    " + m_options.m_python_function + "(valobj,internal_dict)");
+      script_recognizer = std::make_shared<TypeRecognizerImpl>(
+          m_options.m_flags, funct_name, code.c_str());
 
       ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
-      if (interpreter && !interpreter->CheckObjectExists(funct_name))
-      result.AppendWarningWithFormat(
-          "The provided function \"%s\" does not exist - "
-          "please define it before attempting to use this type recognizer.\n",
-          funct_name);
+      if (interpreter && !interpreter->CheckObjectExists(funct_name)) {
+        result.AppendWarningWithFormat(
+            "The provided function \"%s\" does not exist - "
+            "please define it before attempting to use this type recognizer.\n",
+            funct_name);
+      }
     }
 
     // if I am here, script_format must point to something good, so I can add
@@ -1970,7 +1980,8 @@ private:
     Status error;
 
     for (auto &entry : command.entries()) {
-      AddTypeRecognizer(ConstString(entry.ref()), script_recognizer, m_options.m_match_type, m_options.m_category, &error);
+      AddTypeRecognizer(ConstString(entry.ref()), script_recognizer,
+                        m_options.m_match_type, m_options.m_category, &error);
       if (error.Fail()) {
         result.AppendError(error.AsCString());
         return;
