@@ -540,16 +540,7 @@ private:
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override;
 
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_flags.Clear().SetCascades().SetSkipPointers(false).SetSkipReferences(
-          false);
-
-      m_category = "default";
-      m_match_type = eFormatterMatchRegex;
-      m_python_function = "";
-      handwrite_python = false;
-      is_function_based = false;
-    }
+    void OptionParsingStarting(ExecutionContext *execution_context) override;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::ArrayRef(g_type_recognizer_add_options);
@@ -2424,6 +2415,17 @@ Status CommandObjectTypeRecognizerAdd::CommandOptions::SetOptionValue(
   }
 
   return error;
+}
+
+void CommandObjectTypeRecognizerAdd::CommandOptions::OptionParsingStarting(
+    ExecutionContext *execution_context) {
+  m_flags.Clear().SetCascades().SetSkipPointers(false).SetSkipReferences(false);
+
+  m_category = "default";
+  m_match_type = eFormatterMatchRegex;
+  m_python_function = "";
+  handwrite_python = false;
+  is_function_based = false;
 }
 
 bool CommandObjectTypeRecognizerAdd::Execute_HandwritePython(
