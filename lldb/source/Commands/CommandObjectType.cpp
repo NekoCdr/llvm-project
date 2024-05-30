@@ -767,61 +767,7 @@ protected:
 private:
   bool Execute_HandwritePython(Args &command, CommandReturnObject &result);
 
-  void Execute_PythonFunction(Args &command, CommandReturnObject &result) {
-    const size_t argc = command.GetArgumentCount();
-
-    if (argc < 1) {
-      result.AppendErrorWithFormat("%s takes one or more args.\n",
-                                   m_cmd_name.c_str());
-      return;
-    }
-
-    TypeRecognizerImplSP script_recognizer;
-
-    // we have a Python function ready to use
-    if (!m_options.m_python_function.empty()) {
-      const char *funct_name = m_options.m_python_function.c_str();
-      if (!funct_name || !funct_name[0]) {
-        result.AppendError("function name empty.\n");
-        return;
-      }
-
-      std::string code =
-          ("    " + m_options.m_python_function + "(valobj,internal_dict)");
-      script_recognizer = std::make_shared<TypeRecognizerImpl>(
-          m_options.m_flags, funct_name, code.c_str());
-
-      ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-
-      if (interpreter && !interpreter->CheckObjectExists(funct_name)) {
-        result.AppendWarningWithFormat(
-            "The provided function \"%s\" does not exist - "
-            "please define it before attempting to use this type recognizer.\n",
-            funct_name);
-      }
-    }
-
-    // if I am here, script_format must point to something good, so I can add
-    // that as a dynamic type recognizer to all interested parties
-
-    lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(
-        ConstString(m_options.m_category.c_str()), category);
-
-    Status error;
-
-    for (auto &entry : command.entries()) {
-      AddTypeRecognizer(ConstString(entry.ref()), script_recognizer,
-                        m_options.m_match_type, m_options.m_category, &error);
-      if (error.Fail()) {
-        result.AppendError(error.AsCString());
-        return;
-      }
-    }
-
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    return;
-  }
+  void Execute_PythonFunction(Args &command, CommandReturnObject &result);
 };
 
 // CommandObjectTypeFormatAdd
@@ -2631,6 +2577,63 @@ bool CommandObjectTypeRecognizerAdd::Execute_HandwritePython(
                           // back into our IOHandlerDelegate functions
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   return result.Succeeded();
+}
+
+void CommandObjectTypeRecognizerAdd::Execute_PythonFunction(
+    Args &command, CommandReturnObject &result) {
+  const size_t argc = command.GetArgumentCount();
+
+  if (argc < 1) {
+    result.AppendErrorWithFormat("%s takes one or more args.\n",
+                                 m_cmd_name.c_str());
+    return;
+  }
+
+  TypeRecognizerImplSP script_recognizer;
+
+  // we have a Python function ready to use
+  if (!m_options.m_python_function.empty()) {
+    const char *funct_name = m_options.m_python_function.c_str();
+    if (!funct_name || !funct_name[0]) {
+      result.AppendError("function name empty.\n");
+      return;
+    }
+
+    std::string code =
+        ("    " + m_options.m_python_function + "(valobj,internal_dict)");
+    script_recognizer = std::make_shared<TypeRecognizerImpl>(
+        m_options.m_flags, funct_name, code.c_str());
+
+    ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
+
+    if (interpreter && !interpreter->CheckObjectExists(funct_name)) {
+      result.AppendWarningWithFormat(
+          "The provided function \"%s\" does not exist - "
+          "please define it before attempting to use this type recognizer.\n",
+          funct_name);
+    }
+  }
+
+  // if I am here, script_format must point to something good, so I can add
+  // that as a dynamic type recognizer to all interested parties
+
+  lldb::TypeCategoryImplSP category;
+  DataVisualization::Categories::GetCategory(
+      ConstString(m_options.m_category.c_str()), category);
+
+  Status error;
+
+  for (auto &entry : command.entries()) {
+    AddTypeRecognizer(ConstString(entry.ref()), script_recognizer,
+                      m_options.m_match_type, m_options.m_category, &error);
+    if (error.Fail()) {
+      result.AppendError(error.AsCString());
+      return;
+    }
+  }
+
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  return;
 }
 
 #define LLDB_OPTIONS_type_filter_add
