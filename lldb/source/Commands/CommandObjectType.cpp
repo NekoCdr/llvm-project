@@ -620,19 +620,7 @@ private:
   void Execute_PythonFunction(Args &command, CommandReturnObject &result);
 
 protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    WarnOnPotentialUnquotedUnsignedType(command, result);
-
-    if (m_options.handwrite_python) {
-      Execute_HandwritePython(command, result);
-    } else if (m_options.is_function_based) {
-      Execute_PythonFunction(command, result);
-    } else {
-      result.AppendError("must either provide a children list, a Python class "
-                         "name, or use -P and type a Python function "
-                         "line-by-line");
-    }
-  }
+  void DoExecute(Args &command, CommandReturnObject &result) override;
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
     static const char *g_type_recognizer_addreader_instructions =
@@ -2603,6 +2591,21 @@ void CommandObjectTypeRecognizerAdd::Execute_PythonFunction(
 
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   return;
+}
+
+void CommandObjectTypeRecognizerAdd::DoExecute(Args &command,
+                                               CommandReturnObject &result) {
+  WarnOnPotentialUnquotedUnsignedType(command, result);
+
+  if (m_options.handwrite_python) {
+    Execute_HandwritePython(command, result);
+  } else if (m_options.is_function_based) {
+    Execute_PythonFunction(command, result);
+  } else {
+    result.AppendError("must either provide a children list, a Python class "
+                       "name, or use -P and type a Python function "
+                       "line-by-line");
+  }
 }
 
 CommandObjectTypeRecognizerAdd::CommandObjectTypeRecognizerAdd(
