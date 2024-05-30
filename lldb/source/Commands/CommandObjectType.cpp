@@ -626,24 +626,7 @@ public:
 
   void AddTypeRecognizer(ConstString type_name, TypeRecognizerImplSP entry,
                          FormatterMatchType match_type,
-                         std::string category_name, Status *error) {
-    lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(
-        ConstString(category_name.c_str()), category);
-
-    if (match_type == eFormatterMatchRegex) {
-      RegularExpression typeRX(type_name.GetStringRef());
-      if (!typeRX.IsValid()) {
-        if (error) {
-          error->SetErrorString(
-              "regex format error (maybe this is not really a regex?)");
-        }
-        return;
-      }
-    }
-
-    category->AddTypeRecognizer(type_name.GetStringRef(), match_type, entry);
-  }
+                         std::string category_name, Status *error);
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -2636,6 +2619,27 @@ CommandObjectTypeRecognizerAdd::CommandObjectTypeRecognizerAdd(
   type_arg.push_back(type_style_arg);
 
   m_arguments.push_back(type_arg);
+}
+
+void CommandObjectTypeRecognizerAdd::AddTypeRecognizer(
+    ConstString type_name, TypeRecognizerImplSP entry,
+    FormatterMatchType match_type, std::string category_name, Status *error) {
+  lldb::TypeCategoryImplSP category;
+  DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
+                                             category);
+
+  if (match_type == eFormatterMatchRegex) {
+    RegularExpression typeRX(type_name.GetStringRef());
+    if (!typeRX.IsValid()) {
+      if (error) {
+        error->SetErrorString(
+            "regex format error (maybe this is not really a regex?)");
+      }
+      return;
+    }
+  }
+
+  category->AddTypeRecognizer(type_name.GetStringRef(), match_type, entry);
 }
 
 #define LLDB_OPTIONS_type_filter_add
