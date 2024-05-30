@@ -622,20 +622,7 @@ private:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override;
 
-  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    static const char *g_type_recognizer_addreader_instructions =
-        "Enter your Python command(s). Type 'DONE' to end.\n"
-        "def function (valobj,internal_dict):\n"
-        "     \"\"\"valobj: an SBValue which you want to provide a summary "
-        "for\n"
-        "        internal_dict: an LLDB support object not to be used\"\"\"\n";
-
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(g_type_recognizer_addreader_instructions);
-      output_sp->Flush();
-    }
-  }
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
@@ -2605,6 +2592,22 @@ void CommandObjectTypeRecognizerAdd::DoExecute(Args &command,
     result.AppendError("must either provide a children list, a Python class "
                        "name, or use -P and type a Python function "
                        "line-by-line");
+  }
+}
+
+void CommandObjectTypeRecognizerAdd::IOHandlerActivated(IOHandler &io_handler,
+                                                        bool interactive) {
+  static const char *g_type_recognizer_addreader_instructions =
+      "Enter your Python command(s). Type 'DONE' to end.\n"
+      "def function (valobj,internal_dict):\n"
+      "     \"\"\"valobj: an SBValue which you want to provide a summary "
+      "for\n"
+      "        internal_dict: an LLDB support object not to be used\"\"\"\n";
+
+  StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+  if (output_sp && interactive) {
+    output_sp->PutCString(g_type_recognizer_addreader_instructions);
+    output_sp->Flush();
   }
 }
 
