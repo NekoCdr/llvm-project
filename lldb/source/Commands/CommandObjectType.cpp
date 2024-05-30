@@ -620,20 +620,7 @@ private:
   void Execute_PythonFunction(Args &command, CommandReturnObject &result);
 
 public:
-  CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "type recognizer add",
-                            "Add new dynamic type recognizer for a type."),
-        IOHandlerDelegateMultiline("DONE"), m_options(interpreter) {
-    CommandArgumentEntry type_arg;
-    CommandArgumentData type_style_arg;
-
-    type_style_arg.arg_type = eArgTypeName;
-    type_style_arg.arg_repetition = eArgRepeatPlus;
-
-    type_arg.push_back(type_style_arg);
-
-    m_arguments.push_back(type_arg);
-  }
+  CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter);
 
   ~CommandObjectTypeRecognizerAdd() override = default;
 
@@ -2633,6 +2620,22 @@ void CommandObjectTypeRecognizerAdd::Execute_PythonFunction(
 
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   return;
+}
+
+CommandObjectTypeRecognizerAdd::CommandObjectTypeRecognizerAdd(
+    CommandInterpreter &interpreter)
+    : CommandObjectParsed(interpreter, "type recognizer add",
+                          "Add new dynamic type recognizer for a type."),
+      IOHandlerDelegateMultiline("DONE"), m_options(interpreter) {
+  CommandArgumentEntry type_arg;
+  CommandArgumentData type_style_arg;
+
+  type_style_arg.arg_type = eArgTypeName;
+  type_style_arg.arg_repetition = eArgRepeatPlus;
+
+  type_arg.push_back(type_style_arg);
+
+  m_arguments.push_back(type_arg);
 }
 
 #define LLDB_OPTIONS_type_filter_add
