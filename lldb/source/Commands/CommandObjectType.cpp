@@ -619,15 +619,6 @@ private:
 
   void Execute_PythonFunction(Args &command, CommandReturnObject &result);
 
-public:
-  CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter);
-
-  ~CommandObjectTypeRecognizerAdd() override = default;
-
-  void AddTypeRecognizer(ConstString type_name, TypeRecognizerImplSP entry,
-                         FormatterMatchType match_type,
-                         std::string category_name, Status *error);
-
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     WarnOnPotentialUnquotedUnsignedType(command, result);
@@ -737,6 +728,15 @@ protected:
 #endif
     io_handler.SetIsDone(true);
   }
+
+public:
+  CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter);
+
+  ~CommandObjectTypeRecognizerAdd() override = default;
+
+  void AddTypeRecognizer(ConstString type_name, TypeRecognizerImplSP entry,
+                         FormatterMatchType match_type,
+                         std::string category_name, Status *error);
 };
 
 // CommandObjectTypeFormatAdd
