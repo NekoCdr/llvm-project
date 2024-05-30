@@ -615,6 +615,10 @@ private:
 
   Options *GetOptions() override { return &m_options; }
 
+  bool Execute_HandwritePython(Args &command, CommandReturnObject &result);
+
+  void Execute_PythonFunction(Args &command, CommandReturnObject &result);
+
 public:
   CommandObjectTypeRecognizerAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "type recognizer add",
@@ -763,11 +767,6 @@ protected:
 #endif
     io_handler.SetIsDone(true);
   }
-
-private:
-  bool Execute_HandwritePython(Args &command, CommandReturnObject &result);
-
-  void Execute_PythonFunction(Args &command, CommandReturnObject &result);
 };
 
 // CommandObjectTypeFormatAdd
