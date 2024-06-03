@@ -123,7 +123,7 @@ public:
   TypeRecognizerImpl(const Flags &flags,
                      const char *function_name,
                      const char *python_script = nullptr)
-    : m_function_name(), m_python_script()
+    : m_flags(flags), m_function_name(), m_python_script()
   {
     if (function_name)
       m_function_name.assign(function_name);
