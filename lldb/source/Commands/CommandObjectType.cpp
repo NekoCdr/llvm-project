@@ -2420,7 +2420,7 @@ void CommandObjectTypeRecognizerAdd::CommandOptions::OptionParsingStarting(
   m_flags.Clear().SetCascades().SetSkipPointers(false).SetSkipReferences(false);
 
   m_category = "default";
-  m_match_type = eFormatterMatchRegex;
+  m_match_type = eFormatterMatchExact;
   m_python_function = "";
   handwrite_python = false;
   is_function_based = false;
