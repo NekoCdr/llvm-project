@@ -3746,21 +3746,23 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
   Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
-  const bool AssumeInBoundsFlags = [&]() {
-    if (!GEP->isInBounds())
-      return false;
-
+  GEPNoWrapFlags NW = GEP->getNoWrapFlags();
+  if (NW != GEPNoWrapFlags::none()) {
     // We'd like to propagate flags from the IR to the corresponding SCEV nodes,
     // but to do that, we have to ensure that said flag is valid in the entire
     // defined scope of the SCEV.
-    auto *GEPI = dyn_cast<Instruction>(GEP);
     // TODO: non-instructions have global scope.  We might be able to prove
     // some global scope cases
-    return GEPI && isSCEVExprNeverPoison(GEPI);
-  }();
+    auto *GEPI = dyn_cast<Instruction>(GEP);
+    if (!GEPI || !isSCEVExprNeverPoison(GEPI))
+      NW = GEPNoWrapFlags::none();
+  }
 
-  SCEV::NoWrapFlags OffsetWrap =
-    AssumeInBoundsFlags ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags OffsetWrap = SCEV::FlagAnyWrap;
+  if (NW.hasNoUnsignedSignedWrap())
+    OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
+  if (NW.hasNoUnsignedWrap())
+    OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
 
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
@@ -3806,8 +3808,9 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   // Add the base address and the offset. We cannot use the nsw flag, as the
   // base address is unsigned. However, if we know that the offset is
   // non-negative, we can use nuw.
-  SCEV::NoWrapFlags BaseWrap = AssumeInBoundsFlags && isKnownNonNegative(Offset)
-                                   ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
+  bool NUW = NW.hasNoUnsignedWrap() ||
+             (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Offset));
+  SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
   auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
          "GEP should not change type mid-flight.");
@@ -10485,16 +10488,19 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   const SCEV *Step = getSCEVAtScope(AddRec->getOperand(1), L->getParentLoop());
   const SCEVConstant *StepC = dyn_cast<SCEVConstant>(Step);
 
-  if (!isLoopInvariant(Step, L) || !isKnownNonZero(Step))
+  if (!isLoopInvariant(Step, L))
     return getCouldNotCompute();
+
+  // Specialize step for this loop so we get context sensitive facts below.
+  const SCEV *StepWLG = applyLoopGuards(Step, L);
 
   // For positive steps (counting up until unsigned overflow):
   //   N = -Start/Step (as unsigned)
   // For negative steps (counting down to zero):
   //   N = Start/-Step
   // First compute the unsigned distance from zero in the direction of Step.
-  bool CountDown = isKnownNegative(Step);
-  if (!CountDown && !isKnownNonNegative(Step))
+  bool CountDown = isKnownNegative(StepWLG);
+  if (!CountDown && !isKnownNonNegative(StepWLG))
     return getCouldNotCompute();
 
   const SCEV *Distance = CountDown ? Start : getNegativeSCEV(Start);
@@ -10533,6 +10539,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // will have undefined behavior due to wrapping.
   if (ControlsOnlyExit && AddRec->hasNoSelfWrap() &&
       loopHasNoAbnormalExits(AddRec->getLoop())) {
+
+    // If the stride is zero, the loop must be infinite.  In C++, most loops
+    // are finite by assumption, in which case the step being zero implies
+    // UB must execute if the loop is entered.
+    if (!loopIsFiniteByAssumption(L) && !isKnownNonZero(StepWLG))
+      return getCouldNotCompute();
+
     const SCEV *Exact =
         getUDivExpr(Distance, CountDown ? getNegativeSCEV(Step) : Step);
     const SCEV *ConstantMax = getCouldNotCompute();
@@ -10547,7 +10560,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   }
 
   // Solve the general equation.
-  if (!StepC)
+  if (!StepC || StepC->getValue()->isZero())
     return getCouldNotCompute();
   const SCEV *E = SolveLinEquationWithOverflow(StepC->getAPInt(),
                                                getNegativeSCEV(Start), *this);
@@ -14972,6 +14985,9 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
 // 4, A / B becomes X / 8).
 bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
                                 const SCEV *&RHS) {
+  if (Expr->getType()->isPointerTy())
+    return false;
+
   // Try to match 'zext (trunc A to iB) to iY', which is used
   // for URem with constant power-of-2 second operands. Make sure the size of
   // the operand A matches the size of the whole expressions.
