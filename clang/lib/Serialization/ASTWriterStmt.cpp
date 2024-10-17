@@ -19,6 +19,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Token.h"
+#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 using namespace clang;
@@ -473,14 +474,12 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      Record.writeStmtRef(DetailRecord.first);
-      auto *E = DetailRecord.second.dyn_cast<Expr *>();
-      Record.push_back(E == nullptr);
+      auto *E = DetailRecord.dyn_cast<Expr *>();
+      Record.push_back(/* IsDiagnostic */ E == nullptr);
       if (E)
         Record.AddStmt(E);
       else {
-        auto *Diag = DetailRecord.second.get<std::pair<SourceLocation,
-                                                       StringRef> *>();
+        auto *Diag = DetailRecord.get<std::pair<SourceLocation, StringRef> *>();
         Record.AddSourceLocation(Diag->first);
         Record.AddString(Diag->second);
       }
@@ -644,6 +643,12 @@ void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
   Code = serialization::EXPR_CONSTANT;
 }
 
+void ASTStmtWriter::VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getLocation());
+  Code = serialization::EXPR_OPENACC_ASTERISK_SIZE;
+}
+
 void ASTStmtWriter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   VisitExpr(E);
 
@@ -781,6 +786,7 @@ void ASTStmtWriter::VisitCharacterLiteral(CharacterLiteral *E) {
 
 void ASTStmtWriter::VisitParenExpr(ParenExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->isProducedByFoldExpansion());
   Record.AddSourceLocation(E->getLParen());
   Record.AddSourceLocation(E->getRParen());
   Record.AddStmt(E->getSubExpr());
@@ -1064,6 +1070,7 @@ void ASTStmtWriter::VisitBinaryOperator(BinaryOperator *E) {
   CurrentPackingBits.addBits(E->getOpcode(), /*Width=*/6);
   bool HasFPFeatures = E->hasStoredFPFeatures();
   CurrentPackingBits.addBit(HasFPFeatures);
+  CurrentPackingBits.addBit(E->hasExcludedOverflowPattern());
   Record.AddStmt(E->getLHS());
   Record.AddStmt(E->getRHS());
   Record.AddSourceLocation(E->getOperatorLoc());
@@ -2099,6 +2106,22 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   CurrentPackingBits.addBit(E->requiresADL());
   Record.AddDeclRef(E->getNamingClass());
   Code = serialization::EXPR_CXX_UNRESOLVED_LOOKUP;
+
+  if (Writer.isWritingStdCXXNamedModules() && Writer.getChain()) {
+    // Referencing all the possible declarations to make sure the change get
+    // propagted.
+    DeclarationName Name = E->getName();
+    for (auto *Found :
+         Writer.getASTContext().getTranslationUnitDecl()->lookup(Name))
+      if (Found->isFromASTFile())
+        Writer.GetDeclRef(Found);
+
+    llvm::SmallVector<NamespaceDecl *> ExternalNSs;
+    Writer.getChain()->ReadKnownNamespaces(ExternalNSs);
+    for (auto *NS : ExternalNSs)
+      for (auto *Found : NS->lookup(Name))
+        Writer.GetDeclRef(Found);
+  }
 }
 
 void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {
@@ -2374,7 +2397,6 @@ void ASTStmtWriter::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   Record.writeOMPChildren(E->Data);
   Record.AddSourceLocation(E->getBeginLoc());
   Record.AddSourceLocation(E->getEndLoc());
-  Record.writeEnum(E->getMappedDirective());
 }
 
 void ASTStmtWriter::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {
@@ -2420,6 +2442,16 @@ void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {
 void ASTStmtWriter::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
   VisitOMPLoopTransformationDirective(D);
   Code = serialization::STMT_OMP_UNROLL_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPReverseDirective(OMPReverseDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMT_OMP_REVERSE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPForDirective(OMPForDirective *D) {
@@ -2580,6 +2612,12 @@ void ASTStmtWriter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   Record.push_back(D->getNumClauses());
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_TASKWAIT_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPAssumeDirective(OMPAssumeDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_ASSUME_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPErrorDirective(OMPErrorDirective *D) {
@@ -2877,6 +2915,19 @@ void ASTStmtWriter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
   Code = serialization::STMT_OPENACC_LOOP_CONSTRUCT;
+}
+
+//===----------------------------------------------------------------------===//
+// HLSL Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtWriter::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
+  VisitExpr(S);
+  Record.AddStmt(S->getOpaqueArgLValue());
+  Record.AddStmt(S->getCastedTemporary());
+  Record.AddStmt(S->getWritebackCast());
+  Record.writeBool(S->isInOut());
+  Code = serialization::EXPR_HLSL_OUT_ARG;
 }
 
 //===----------------------------------------------------------------------===//

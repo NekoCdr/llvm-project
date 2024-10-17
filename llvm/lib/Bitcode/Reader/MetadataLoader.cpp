@@ -222,7 +222,7 @@ Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
 
   // Create and return a placeholder, which will later be RAUW'd.
   ++NumMDNodeTemporary;
-  Metadata *MD = MDNode::getTemporary(Context, std::nullopt).release();
+  Metadata *MD = MDNode::getTemporary(Context, {}).release();
   MetadataPtrs[Idx].reset(MD);
   return MD;
 }
@@ -304,7 +304,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRef(Metadata *MaybeUUID) {
 
   auto &Ref = OldTypeRefs.Unknown[UUID];
   if (!Ref)
-    Ref = MDNode::getTemporary(Context, std::nullopt);
+    Ref = MDNode::getTemporary(Context, {});
   return Ref.get();
 }
 
@@ -321,7 +321,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
   // resolveTypeRefArrays() will be resolve this forward reference.
   OldTypeRefs.Arrays.emplace_back(
       std::piecewise_construct, std::forward_as_tuple(Tuple),
-      std::forward_as_tuple(MDTuple::getTemporary(Context, std::nullopt)));
+      std::forward_as_tuple(MDTuple::getTemporary(Context, {})));
   return OldTypeRefs.Arrays.back().second.get();
 }
 
@@ -536,9 +536,8 @@ class MetadataLoader::MetadataLoaderImpl {
     DenseSet<DILocalScope *> Visited;
     while (S && !isa<DISubprogram>(S)) {
       S = dyn_cast_or_null<DILocalScope>(S->getScope());
-      if (Visited.contains(S))
+      if (!Visited.insert(S).second)
         break;
-      Visited.insert(S);
     }
     ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
 
@@ -549,8 +548,8 @@ class MetadataLoader::MetadataLoaderImpl {
   /// DISubprogram's retainedNodes.
   void upgradeCULocals() {
     if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
-      for (unsigned I = 0, E = CUNodes->getNumOperands(); I != E; ++I) {
-        auto *CU = dyn_cast<DICompileUnit>(CUNodes->getOperand(I));
+      for (MDNode *N : CUNodes->operands()) {
+        auto *CU = dyn_cast<DICompileUnit>(N);
         if (!CU)
           continue;
 
@@ -1332,8 +1331,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // If this isn't a LocalAsMetadata record, we're dropping it.  This used
     // to be legal, but there's no upgrade path.
     auto dropRecord = [&] {
-      MetadataList.assignValue(MDNode::get(Context, std::nullopt),
-                               NextMetadataNo);
+      MetadataList.assignValue(MDNode::get(Context, {}), NextMetadataNo);
       NextMetadataNo++;
     };
     if (Record.size() != 2) {
@@ -1527,7 +1525,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 8)
+    if (Record.size() < 6 || Record.size() > 7)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1535,14 +1533,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
 
-    Metadata *Annotations = nullptr;
-    if (Record.size() > 7 && Record[7])
-      Annotations = getMDOrNull(Record[7]);
-
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags, Annotations)),
+                         Record[4], Record[5], Flags)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1707,7 +1701,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_SUBROUTINE_TYPE: {
-    if (Record.size() < 3 || Record.size() > 5)
+    if (Record.size() < 3 || Record.size() > 4)
       return error("Invalid record");
     bool IsOldTypeRefArray = Record[0] < 2;
     unsigned CC = (Record.size() > 3) ? Record[3] : 0;
@@ -1717,13 +1711,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Types = getMDOrNull(Record[2]);
     if (LLVM_UNLIKELY(IsOldTypeRefArray))
       Types = MetadataList.upgradeTypeRefArray(Types);
-    Metadata *Annotations = nullptr;
-    if (Record.size() > 4 && Record[4])
-      Annotations = getMDOrNull(Record[4]);
 
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DISubroutineType,
-                        (Context, Flags, CC, Types, Annotations)),
+        GET_OR_DISTINCT(DISubroutineType, (Context, Flags, CC, Types)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
