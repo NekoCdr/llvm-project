@@ -2376,7 +2376,7 @@ Status CommandObjectTypeRecognizerAdd::CommandOptions::SetOptionValue(
   case 'C':
     m_flags.SetCascades(OptionArgParser::ToBoolean(option_arg, true, &success));
     if (!success)
-      error.SetErrorStringWithFormat("invalid value for cascade: %s",
+      error.FromErrorStringWithFormat("invalid value for cascade: %s",
                                      option_arg.str().c_str());
     break;
   case 'P':
@@ -2397,14 +2397,14 @@ Status CommandObjectTypeRecognizerAdd::CommandOptions::SetOptionValue(
     break;
   case 'x':
     if (m_match_type == eFormatterMatchCallback)
-      error.SetErrorString(
+      error.FromErrorString(
           "can't use --regex and --recognizer-function at the same time");
     else
       m_match_type = eFormatterMatchRegex;
     break;
   case '\x01':
     if (m_match_type == eFormatterMatchRegex)
-      error.SetErrorString(
+      error.FromErrorString(
           "can't use --regex and --recognizer-function at the same time");
     else
       m_match_type = eFormatterMatchCallback;
@@ -2649,7 +2649,7 @@ void CommandObjectTypeRecognizerAdd::AddTypeRecognizer(
     RegularExpression typeRX(type_name.GetStringRef());
     if (!typeRX.IsValid()) {
       if (error) {
-        error->SetErrorString(
+        error->FromErrorString(
             "regex format error (maybe this is not really a regex?)");
       }
       return;
