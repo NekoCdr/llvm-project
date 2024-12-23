@@ -191,6 +191,9 @@ public:
                           const TypeSummaryOptions &options,
                           std::string &retval) override;
 
+  lldb::ValueObjectSP RecognizeType(const char *p_function_name,
+                                 lldb::ValueObjectSP input_valobj) override;
+
   bool FormatterCallbackFunction(const char *function_name,
                                  lldb::TypeImplSP type_impl_sp) override;
 
