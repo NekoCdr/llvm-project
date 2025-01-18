@@ -3567,6 +3567,13 @@ void ValueObject::ClearUserVisibleData(uint32_t clear_mask) {
     if (m_synthetic_value)
       m_synthetic_value = nullptr;
   }
+
+  if ((clear_mask & eClearUserVisibleDataItemsType) ==
+      eClearUserVisibleDataItemsType) {
+    if (IsDynamic() && m_parent->m_dynamic_value) {
+      m_parent->m_dynamic_value = nullptr;
+    }
+  }
 }
 
 SymbolContextScope *ValueObject::GetSymbolContextScope() {

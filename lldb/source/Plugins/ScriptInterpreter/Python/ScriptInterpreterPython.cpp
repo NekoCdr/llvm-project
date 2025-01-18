@@ -1906,6 +1906,7 @@ ScriptInterpreterPythonImpl::RecognizeType(const char *p_function_name,
     Py_XDECREF(out_py_valtype);
     return nullptr;
   }
+  sb_value_ptr->SetPreferDynamicValue(lldb::eNoDynamicValues);
 
   return SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(sb_value_ptr);
 }
