@@ -140,17 +140,18 @@ bool ValueObjectRecognizedValue::UpdateValue() {
   lldb::ValueObjectSP recognized_valobj =
       m_parent->GetTypeRecognizer()->RecognizeObject(m_parent);
 
-  if (recognized_valobj) {
+  if (recognized_valobj && recognized_valobj->GetCompilerType().IsValid()) {
     m_value = recognized_valobj->GetValue();
 
-    bool has_changed_type = m_value.GetValueType() != old_value.GetValueType();
-
-    if (has_changed_type) {
+    if (m_value.GetValueType() != old_value.GetValueType()) {
+      ClearDynamicTypeInformation();
       SetValueDidChange(true);
-      m_value.SetCompilerType(recognized_valobj->GetCompilerType());
+
+      m_type_impl = TypeImpl(m_parent->GetCompilerType(),
+                             recognized_valobj->GetCompilerType());
       m_dynamic_type_info.SetCompilerType(recognized_valobj->GetCompilerType());
-      // TODO: (NekoCdr) remove comments below after figuring out what has to be done
-      // m_type_impl = TypeImpl(m_parent->GetCompilerType(), recognized_valobj->GetCompilerType());
+      m_value.SetCompilerType(recognized_valobj->GetCompilerType());
+      m_value.SetValueType(recognized_valobj->GetValue().GetValueType());
       m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
 
       if (!m_error.Success()) {
