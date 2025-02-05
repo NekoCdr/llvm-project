@@ -8,6 +8,8 @@
 
 #include "lldb/API/SBType.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
@@ -1877,11 +1879,12 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
   return ret_val;
 }
 
-lldb::ValueObjectSP
+Status
 ScriptInterpreterPythonImpl::RecognizeType(const char *p_function_name,
-                                           lldb::ValueObjectSP input_valobj) {
+                                           lldb::ValueObjectSP input_valobj,
+                                           CompilerType &output_ct) {
   if (!p_function_name || p_function_name[0] == '\0' || !input_valobj.get())
-    return nullptr;
+    return Status("No python function name");
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
@@ -1890,25 +1893,29 @@ ScriptInterpreterPythonImpl::RecognizeType(const char *p_function_name,
       p_function_name, GetSessionDictionary().get(), input_valobj);
 
   if (!ret_val.IsAllocated())
-    return nullptr;
+    return Status("No python function result");
 
   PyObject *out_py_valtype = ret_val.get();
 
   if (!out_py_valtype || out_py_valtype == Py_None) {
     Py_XDECREF(out_py_valtype);
-    return nullptr;
+    return Status("No correct PyObject");
   }
 
-  lldb::SBValue *sb_value_ptr =
-      (lldb::SBValue *)LLDBSWIGPython_CastPyObjectToSBValue(out_py_valtype);
+  lldb::SBType *sb_type_ptr =
+      (lldb::SBType *)LLDBSWIGPython_CastPyObjectToSBType(out_py_valtype);
 
-  if (sb_value_ptr == nullptr) {
+  if (sb_type_ptr == nullptr) {
     Py_XDECREF(out_py_valtype);
-    return nullptr;
+    return Status("No SBType");
   }
-  sb_value_ptr->SetPreferDynamicValue(lldb::eNoDynamicValues);
 
-  return SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(sb_value_ptr);
+  lldb::TypeImplSP type_sp =
+      SWIGBridge::LLDBSWIGPython_GetTypeImplSPFromSBType(sb_type_ptr);
+
+  output_ct = type_sp->GetCompilerType(true);
+
+  return Status();
 }
 
 bool ScriptInterpreterPythonImpl::FormatterCallbackFunction(

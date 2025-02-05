@@ -340,9 +340,10 @@ public:
     return false;
   }
 
-  virtual lldb::ValueObjectSP RecognizeType(const char *p_function_name,
-                                         lldb::ValueObjectSP input_valobj) {
-    return nullptr;
+  virtual Status RecognizeType(const char *p_function_name,
+                               lldb::ValueObjectSP input_valobj,
+                               CompilerType &output_ct) {
+    return Status::FromErrorString("not implemented");
   };
 
   // Calls the specified formatter matching Python function and returns its

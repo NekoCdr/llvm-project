@@ -137,21 +137,19 @@ bool ValueObjectRecognizedValue::UpdateValue() {
 
   Value old_value(m_value);
 
-  lldb::ValueObjectSP recognized_valobj =
-      m_parent->GetTypeRecognizer()->RecognizeObject(m_parent);
+  CompilerType recognized_ct;
+  m_error = m_parent->GetTypeRecognizer()->RecognizeObjectType(m_parent, recognized_ct);
 
-  if (recognized_valobj && recognized_valobj->GetCompilerType().IsValid()) {
-    m_value = recognized_valobj->GetValue();
-
-    if (m_value.GetValueType() != old_value.GetValueType()) {
+  if (m_error.Success() && recognized_ct && recognized_ct.IsValid()) {
+    if (recognized_ct != this->GetCompilerType()) {
       ClearDynamicTypeInformation();
       SetValueDidChange(true);
 
       m_type_impl = TypeImpl(m_parent->GetCompilerType(),
-                             recognized_valobj->GetCompilerType());
-      m_dynamic_type_info.SetCompilerType(recognized_valobj->GetCompilerType());
-      m_value.SetCompilerType(recognized_valobj->GetCompilerType());
-      m_value.SetValueType(recognized_valobj->GetValue().GetValueType());
+                             recognized_ct);
+      m_dynamic_type_info.SetCompilerType(recognized_ct);
+      m_value.SetCompilerType(recognized_ct);
+      m_value.SetValueType(Value::ValueType::Scalar);
       m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
 
       if (!m_error.Success()) {

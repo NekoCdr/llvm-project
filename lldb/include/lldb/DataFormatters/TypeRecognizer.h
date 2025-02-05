@@ -17,6 +17,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
@@ -153,25 +154,23 @@ public:
 
   typedef std::shared_ptr<TypeRecognizerImpl> SharedPointer;
 
-  lldb::ValueObjectSP RecognizeObject(ValueObject *valobj) {
+  Status RecognizeObjectType(ValueObject *valobj, CompilerType &output_ct) {
     if (!valobj)
-      return nullptr;
+      return Status("No valobj");
 
     lldb::TargetSP target_sp(valobj->GetTargetSP());
 
     if (!target_sp)
-      return nullptr;
+      return Status("No target");
 
     ScriptInterpreter *script_interpreter =
         target_sp->GetDebugger().GetScriptInterpreter();
 
     if (!script_interpreter)
-      return nullptr;
+      return Status("No ScriptInterpreter");
 
-    lldb::ValueObjectSP result = script_interpreter->RecognizeType(
-        m_function_name.c_str(), valobj->GetSP());
-
-    return result;
+    return script_interpreter->RecognizeType(
+        m_function_name.c_str(), valobj->GetSP(), output_ct);
 
     // TODO: (NekoCdr) remove comments below after implementing cast
 
