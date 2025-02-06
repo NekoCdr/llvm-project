@@ -342,7 +342,7 @@ public:
   }
 
   virtual Status RecognizeType(const char *p_function_name,
-                               lldb::ValueObjectSP input_valobj,
+                               const lldb::ValueObjectSP input_valobj,
                                CompilerType &output_ct, Address &output_addr) {
     return Status::FromErrorString("not implemented");
   };

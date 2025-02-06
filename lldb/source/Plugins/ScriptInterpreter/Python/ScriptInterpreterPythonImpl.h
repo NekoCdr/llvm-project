@@ -193,7 +193,7 @@ public:
                           std::string &retval) override;
 
   Status RecognizeType(const char *p_function_name,
-                       lldb::ValueObjectSP input_valobj,
+                       const lldb::ValueObjectSP input_valobj,
                        CompilerType &output_ct, Address &output_addr) override;
 
   bool FormatterCallbackFunction(const char *function_name,

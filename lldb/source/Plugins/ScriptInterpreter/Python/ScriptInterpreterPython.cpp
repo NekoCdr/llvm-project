@@ -1881,7 +1881,7 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
 }
 
 Status ScriptInterpreterPythonImpl::RecognizeType(
-    const char *p_function_name, lldb::ValueObjectSP input_valobj,
+    const char *p_function_name, const lldb::ValueObjectSP input_valobj,
     CompilerType &output_ct, Address &output_addr) {
   if (!p_function_name || p_function_name[0] == '\0' || !input_valobj.get())
     return Status("No python function name");
