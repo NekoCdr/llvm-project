@@ -21,6 +21,9 @@ class RecognizedValueTestCase(TestBase):
         self.br_line_downcast = line_number(
             "main.cpp", "// Break here in downcast()."
         )
+        self.br_line_downcast_w_multiply = line_number(
+            "main.cpp", "// Break here in downcast_w_multiply()."
+        )
 
         # Prepare executable.
         self.build()
@@ -36,7 +39,11 @@ class RecognizedValueTestCase(TestBase):
         br_downcast = target.BreakpointCreateByLocation(
             "main.cpp", self.br_line_downcast
         )
+        br_downcast_w_multiply = target.BreakpointCreateByLocation(
+            "main.cpp", self.br_line_downcast_w_multiply
+        )
         self.assertTrue(br_downcast, VALID_BREAKPOINT)
+        self.assertTrue(br_downcast_w_multiply, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
@@ -75,6 +82,24 @@ class RecognizedValueTestCase(TestBase):
         a_recognized = frame.FindVariable("a", use_dynamic)
         self.assertTrue(a_recognized)
         self.assertTrue(a_recognized.type.name == "B *")
+
+        # Okay, now continue to the downcast with multiply bases
+        threads = lldbutil.continue_to_breakpoint(process, br_downcast_w_multiply)
+        self.assertEqual(len(threads), 1)
+        thread = threads[0]
+
+        frame = thread.GetFrameAtIndex(0)
+
+        # Get static "a"
+        a_static = frame.FindVariable("a", no_dynamic)
+        self.assertTrue(a_static)
+        self.assertTrue(a_static.type.name == "A *")
+
+        # Then make sure that the lldb_private::ValueObjectRecognizedValue works
+        # fine.
+        a_recognized = frame.FindVariable("a", use_dynamic)
+        self.assertTrue(a_recognized)
+        self.assertTrue(a_recognized.type.name == "B2 *")
 
     # TODO: We need to refine the TypeRecognizer infrastructure so that it affects the expression evaluator result and remove this expectedFailureAll decorator
     @expectedFailureAll

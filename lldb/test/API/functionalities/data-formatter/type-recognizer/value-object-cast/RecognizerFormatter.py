@@ -7,6 +7,8 @@ def recognizeType(value: SBValue, internal_dict) -> SBType:
         derived_type: SBType = value.target.FindFirstType("A")
     elif o_type == "eTypeB":
         derived_type: SBType = value.target.FindFirstType("B")
+    elif o_type == "eTypeB2":
+        derived_type: SBType = value.target.FindFirstType("B2")
     else:
         raise NotImplementedError(o_type)
 
