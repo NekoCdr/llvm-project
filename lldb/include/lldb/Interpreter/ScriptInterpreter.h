@@ -19,6 +19,7 @@
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/ThreadedCommunication.h"
@@ -342,7 +343,7 @@ public:
 
   virtual Status RecognizeType(const char *p_function_name,
                                lldb::ValueObjectSP input_valobj,
-                               CompilerType &output_ct) {
+                               CompilerType &output_ct, Address &output_addr) {
     return Status::FromErrorString("not implemented");
   };
 

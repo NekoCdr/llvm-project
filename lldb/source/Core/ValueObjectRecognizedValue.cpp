@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ValueObjectRecognizedValue.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeRecognizer.h"
@@ -138,7 +139,8 @@ bool ValueObjectRecognizedValue::UpdateValue() {
   Value old_value(m_value);
 
   CompilerType recognized_ct;
-  m_error = m_parent->GetTypeRecognizer()->RecognizeObjectType(m_parent, recognized_ct);
+  Address dynamic_address;
+  m_error = m_parent->GetTypeRecognizer()->RecognizeObjectType(m_parent, recognized_ct, dynamic_address);
 
   if (m_error.Success() && recognized_ct && recognized_ct.IsValid()) {
     if (recognized_ct != this->GetCompilerType()) {
@@ -148,6 +150,15 @@ bool ValueObjectRecognizedValue::UpdateValue() {
       m_type_impl = TypeImpl(m_parent->GetCompilerType(),
                              recognized_ct);
       m_dynamic_type_info.SetCompilerType(recognized_ct);
+
+      if (!m_address.IsValid() || m_address != dynamic_address) {
+        if (m_address.IsValid())
+          SetValueDidChange(true);
+
+        m_address = dynamic_address;
+        m_value.GetScalar() = m_address.GetLoadAddress(GetTargetSP().get());
+      }
+
       m_value.SetCompilerType(recognized_ct);
       m_value.SetValueType(Value::ValueType::Scalar);
       m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());

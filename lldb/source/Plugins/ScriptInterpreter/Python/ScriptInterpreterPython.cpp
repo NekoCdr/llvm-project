@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBType.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/Status.h"
@@ -1879,10 +1880,9 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
   return ret_val;
 }
 
-Status
-ScriptInterpreterPythonImpl::RecognizeType(const char *p_function_name,
-                                           lldb::ValueObjectSP input_valobj,
-                                           CompilerType &output_ct) {
+Status ScriptInterpreterPythonImpl::RecognizeType(
+    const char *p_function_name, lldb::ValueObjectSP input_valobj,
+    CompilerType &output_ct, Address &output_addr) {
   if (!p_function_name || p_function_name[0] == '\0' || !input_valobj.get())
     return Status("No python function name");
 
@@ -1914,6 +1914,19 @@ ScriptInterpreterPythonImpl::RecognizeType(const char *p_function_name,
       SWIGBridge::LLDBSWIGPython_GetTypeImplSPFromSBType(sb_type_ptr);
 
   output_ct = type_sp->GetCompilerType(true);
+
+  auto source_ct = input_valobj->IsPointerType()
+                       ? input_valobj->GetCompilerType().GetPointeeType()
+                       : input_valobj->GetCompilerType();
+  auto target_ct =
+      output_ct.IsPointerType() ? output_ct.GetPointeeType() : output_ct;
+
+  int64_t offset = 0;
+
+  // We ignore any errors and assume that the user knows what they are doing.
+  source_ct.GetTypeSystem()->GetInheritanceAddressOffset(source_ct, target_ct,
+                                                         offset);
+  output_addr = input_valobj->GetPointerValue() + offset;
 
   return Status();
 }

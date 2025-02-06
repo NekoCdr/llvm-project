@@ -9,6 +9,7 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 
+#include "lldb/Core/Address.h"
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_PYTHON
@@ -193,7 +194,7 @@ public:
 
   Status RecognizeType(const char *p_function_name,
                        lldb::ValueObjectSP input_valobj,
-                       CompilerType &output_ct) override;
+                       CompilerType &output_ct, Address &output_addr) override;
 
   bool FormatterCallbackFunction(const char *function_name,
                                  lldb::TypeImplSP type_impl_sp) override;

@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -154,7 +155,7 @@ public:
 
   typedef std::shared_ptr<TypeRecognizerImpl> SharedPointer;
 
-  Status RecognizeObjectType(ValueObject *valobj, CompilerType &output_ct) {
+  Status RecognizeObjectType(ValueObject *valobj, CompilerType &output_ct, Address &output_addr) {
     if (!valobj)
       return Status("No valobj");
 
@@ -170,7 +171,7 @@ public:
       return Status("No ScriptInterpreter");
 
     return script_interpreter->RecognizeType(
-        m_function_name.c_str(), valobj->GetSP(), output_ct);
+        m_function_name.c_str(), valobj->GetSP(), output_ct, output_addr);
 
     // TODO: (NekoCdr) remove comments below after implementing cast
 
