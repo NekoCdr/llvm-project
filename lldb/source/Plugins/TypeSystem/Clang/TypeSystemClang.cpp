@@ -9,6 +9,7 @@
 #include "TypeSystemClang.h"
 
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -16,6 +17,7 @@
 
 #include <mutex>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,6 +62,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -73,6 +76,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/ThreadSafeDenseMap.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
@@ -6084,6 +6088,42 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
     break;
   }
   return CompilerType();
+}
+
+std::optional<int64_t>
+TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
+                                    const clang::CXXRecordDecl *base) {
+  auto offsets =
+      getASTContext().getASTRecordLayout(derived).getBaseOffsetsMap();
+  clang::CXXRecordDecl *base_definition = base->getDefinition();
+
+  if (offsets.count(base_definition))
+    return offsets[base_definition].getQuantity();
+
+  return std::nullopt;
+}
+
+Status
+TypeSystemClang::GetInheritanceAddressOffset(const CompilerType source_ct,
+                                             const CompilerType target_ct,
+                                             int64_t &output_offset) {
+  auto *source_decl = GetAsCXXRecordDecl(source_ct.GetOpaqueQualType());
+  auto *target_decl = GetAsCXXRecordDecl(target_ct.GetOpaqueQualType());
+
+  if (!source_decl || !target_decl)
+    return Status("Record layout does not have C++ specific info!");
+
+  if (auto offset = TryToGetBaseOffset(target_decl, source_decl)) {
+    output_offset = -*offset;
+    return Status();
+  }
+
+  if (auto offset = TryToGetBaseOffset(source_decl, target_decl)) {
+    output_offset = *offset;
+    return Status();
+  }
+
+  return Status("Given types are not related by inheritance.");
 }
 
 CompilerDecl
