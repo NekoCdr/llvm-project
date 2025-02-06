@@ -172,30 +172,6 @@ public:
 
     return script_interpreter->RecognizeType(
         m_function_name.c_str(), valobj->GetSP(), output_ct, output_addr);
-
-    // TODO: (NekoCdr) remove comments below after implementing cast
-
-    // lldb::ValueObjectSP result_cast = ValueObject::CreateValueObjectFromAddress(
-    //     valobj->GetName(), valobj->GetAddressOf(),
-    //     valobj->GetExecutionContextRef(), result->GetCompilerType());
-
-    // lldb::TypeImplSP type_impl_sp = script_interpreter->RecognizeType(
-    //     m_function_name.c_str(), valobj->GetSP());
-
-    // if (!type_impl_sp)
-    //   return nullptr;
-
-    // CompilerType ct = type_impl_sp->GetCompilerType(true);
-
-    // if (!ct.IsValid())
-    //   return nullptr;
-
-    // lldb::ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromAddress(
-    //     valobj->GetName(), valobj->GetAddressOf(),
-    //     valobj->GetExecutionContextRef(), ct));
-
-    // return valobj_sp;
-    // return valobj->DoCast(ct);
   }
 
 private:
