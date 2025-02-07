@@ -24,6 +24,9 @@ class RecognizedValueTestCase(TestBase):
         self.br_line_downcast_w_multiply = line_number(
             "main.cpp", "// Break here in downcast_w_multiply()."
         )
+        self.br_line_upcast = line_number(
+            "main.cpp", "// Break here in upcast()."
+        )
 
         # Prepare executable.
         self.build()
@@ -42,8 +45,12 @@ class RecognizedValueTestCase(TestBase):
         br_downcast_w_multiply = target.BreakpointCreateByLocation(
             "main.cpp", self.br_line_downcast_w_multiply
         )
+        br_upcast = target.BreakpointCreateByLocation(
+            "main.cpp", self.br_line_upcast
+        )
         self.assertTrue(br_downcast, VALID_BREAKPOINT)
         self.assertTrue(br_downcast_w_multiply, VALID_BREAKPOINT)
+        self.assertTrue(br_upcast, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
@@ -100,6 +107,27 @@ class RecognizedValueTestCase(TestBase):
         a_recognized = frame.FindVariable("a", use_dynamic)
         self.assertTrue(a_recognized)
         self.assertTrue(a_recognized.type.name == "B2 *")
+
+        # Okay, now continue to the upcast with multiply bases
+        threads = lldbutil.continue_to_breakpoint(process, br_upcast)
+        self.assertEqual(len(threads), 1)
+        thread = threads[0]
+
+        frame = thread.GetFrameAtIndex(0)
+
+        # Register new type for recognize
+        self.runCmd("type recognizer add -F RecognizerFormatter.recognizeType C3")
+
+        # Get static "a"
+        a_static = frame.FindVariable("a", no_dynamic)
+        self.assertTrue(a_static)
+        self.assertTrue(a_static.type.name == "C3 *")
+
+        # Then make sure that the lldb_private::ValueObjectRecognizedValue works
+        # fine.
+        a_recognized = frame.FindVariable("a", use_dynamic)
+        self.assertTrue(a_recognized)
+        self.assertTrue(a_recognized.type.name == "A *")
 
     # TODO: We need to refine the TypeRecognizer infrastructure so that it affects the expression evaluator result and remove this expectedFailureAll decorator
     @expectedFailureAll

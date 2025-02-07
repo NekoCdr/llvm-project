@@ -6100,6 +6100,14 @@ TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
   if (offsets.count(base_definition))
     return offsets[base_definition].getQuantity();
 
+  if (offsets.size()) {
+    for (const auto& [parent_decl, offset]: offsets) {
+      if (auto parent_offset = TryToGetBaseOffset(parent_decl, base)) {
+        return *parent_offset + offset.getQuantity();
+      }
+    }
+  }
+
   return std::nullopt;
 }
 
