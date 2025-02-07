@@ -275,11 +275,6 @@ public:
                            const TargetRegisterClass *SubRC,
                            unsigned SubIdx) const;
 
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
-
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
   bool opCanUseLiteralConstant(unsigned OpType) const;
@@ -462,6 +457,14 @@ public:
   // Does not go inside function calls.
   unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
                               const TargetRegisterClass &RC) const;
+
+  std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
+    return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG
+                             : std::optional<uint8_t>{};
+  }
+
+  SmallVector<StringLiteral>
+  getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
 };
 
 namespace AMDGPU {
