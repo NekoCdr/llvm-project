@@ -15,6 +15,7 @@
 #include "lldb/DataFormatters/TypeRecognizer.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -33,6 +34,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -185,16 +187,17 @@ public:
         "for\n"
         "        internal_dict: an LLDB support object not to be used\"\"\"\n";
 
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(g_summary_addreader_instructions);
-      output_sp->Flush();
+    if (interactive) {
+      if (LockableStreamFileSP output_sp = io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(g_summary_addreader_instructions);
+      }
     }
   }
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
-    StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
+    LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
 #if LLDB_ENABLE_PYTHON
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
@@ -215,9 +218,10 @@ public:
             if (interpreter->GenerateTypeScriptFunction(lines,
                                                         funct_name_str)) {
               if (funct_name_str.empty()) {
-                error_sp->Printf("unable to obtain a valid function name from "
-                                 "the script interpreter.\n");
-                error_sp->Flush();
+                LockedStreamFile locked_stream = error_sp->Lock();
+                locked_stream.Printf(
+                    "unable to obtain a valid function name from "
+                    "the script interpreter.\n");
               } else {
                 // now I have a valid function name, let's add this as script
                 // for every type in the list
@@ -234,8 +238,8 @@ public:
                              options->m_match_type, options->m_category,
                              &error);
                   if (error.Fail()) {
-                    error_sp->Printf("error: %s", error.AsCString());
-                    error_sp->Flush();
+                    LockedStreamFile locked_stream = error_sp->Lock();
+                    locked_stream.Printf("error: %s", error.AsCString());
                   }
                 }
 
@@ -246,41 +250,42 @@ public:
                     CommandObjectTypeSummaryAdd::AddNamedSummary(
                         options->m_name, script_format, &error);
                     if (error.Fail()) {
-                      error_sp->Printf("error: %s", error.AsCString());
-                      error_sp->Flush();
+                      LockedStreamFile locked_stream = error_sp->Lock();
+                      locked_stream.Printf("error: %s", error.AsCString());
                     }
                   } else {
-                    error_sp->Printf("error: %s", error.AsCString());
-                    error_sp->Flush();
+                    LockedStreamFile locked_stream = error_sp->Lock();
+                    locked_stream.Printf("error: %s", error.AsCString());
                   }
                 } else {
                   if (error.AsCString()) {
-                    error_sp->Printf("error: %s", error.AsCString());
-                    error_sp->Flush();
+                    LockedStreamFile locked_stream = error_sp->Lock();
+                    locked_stream.Printf("error: %s", error.AsCString());
                   }
                 }
               }
             } else {
-              error_sp->Printf("error: unable to generate a function.\n");
-              error_sp->Flush();
+              LockedStreamFile locked_stream = error_sp->Lock();
+              locked_stream.Printf("error: unable to generate a function.\n");
             }
           } else {
-            error_sp->Printf("error: no script interpreter.\n");
-            error_sp->Flush();
+            LockedStreamFile locked_stream = error_sp->Lock();
+            locked_stream.Printf("error: no script interpreter.\n");
           }
         } else {
-          error_sp->Printf("error: internal synchronization information "
-                           "missing or invalid.\n");
-          error_sp->Flush();
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("error: internal synchronization information "
+                               "missing or invalid.\n");
         }
       } else {
-        error_sp->Printf("error: empty function, didn't add python command.\n");
-        error_sp->Flush();
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream.Printf(
+            "error: empty function, didn't add python command.\n");
       }
     } else {
-      error_sp->Printf(
+      LockedStreamFile locked_stream = error_sp->Lock();
+      locked_stream.Printf(
           "error: script interpreter missing, didn't add python command.\n");
-      error_sp->Flush();
     }
 #endif
     io_handler.SetIsDone(true);
@@ -422,16 +427,17 @@ protected:
   }
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(g_synth_addreader_instructions);
-      output_sp->Flush();
+    if (interactive) {
+      if (LockableStreamFileSP output_sp = io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(g_synth_addreader_instructions);
+      }
     }
   }
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
-    StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
+    LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
 #if LLDB_ENABLE_PYTHON
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
@@ -451,9 +457,10 @@ protected:
             std::string class_name_str;
             if (interpreter->GenerateTypeSynthClass(lines, class_name_str)) {
               if (class_name_str.empty()) {
-                error_sp->Printf(
+
+                LockedStreamFile locked_stream = error_sp->Lock();
+                locked_stream.Printf(
                     "error: unable to obtain a proper name for the class.\n");
-                error_sp->Flush();
               } else {
                 // everything should be fine now, let's add the synth provider
                 // class
@@ -477,37 +484,39 @@ protected:
                     if (AddSynth(ConstString(type_name), synth_provider,
                                  options->m_match_type, options->m_category,
                                  &error)) {
-                      error_sp->Printf("error: %s\n", error.AsCString());
-                      error_sp->Flush();
+                      LockedStreamFile locked_stream = error_sp->Lock();
+                      locked_stream.Printf("error: %s\n", error.AsCString());
                       break;
                     }
                   } else {
-                    error_sp->Printf("error: invalid type name.\n");
-                    error_sp->Flush();
+                    LockedStreamFile locked_stream = error_sp->Lock();
+                    locked_stream.Printf("error: invalid type name.\n");
                     break;
                   }
                 }
               }
             } else {
-              error_sp->Printf("error: unable to generate a class.\n");
-              error_sp->Flush();
+              LockedStreamFile locked_stream = error_sp->Lock();
+              locked_stream.Printf("error: unable to generate a class.\n");
             }
           } else {
-            error_sp->Printf("error: no script interpreter.\n");
-            error_sp->Flush();
+            LockedStreamFile locked_stream = error_sp->Lock();
+            locked_stream.Printf("error: no script interpreter.\n");
           }
         } else {
-          error_sp->Printf("error: internal synchronization data missing.\n");
-          error_sp->Flush();
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf(
+              "error: internal synchronization data missing.\n");
         }
       } else {
-        error_sp->Printf("error: empty function, didn't add python command.\n");
-        error_sp->Flush();
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream.Printf(
+            "error: empty function, didn't add python command.\n");
       }
     } else {
-      error_sp->Printf(
+      LockedStreamFile locked_stream = error_sp->Lock();
+      locked_stream.Printf(
           "error: script interpreter missing, didn't add python command.\n");
-      error_sp->Flush();
     }
 
 #endif
@@ -1024,8 +1033,8 @@ protected:
 class CommandObjectTypeFormatDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeFormatDelete(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemFormat) {}
+      : CommandObjectTypeFormatterDelete(interpreter,
+                                         eFormatCategoryItemFormat) {}
 
   ~CommandObjectTypeFormatDelete() override = default;
 };
@@ -1675,8 +1684,8 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
 class CommandObjectTypeSummaryDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeSummaryDelete(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemSummary) {}
+      : CommandObjectTypeFormatterDelete(interpreter,
+                                         eFormatCategoryItemSummary) {}
 
   ~CommandObjectTypeSummaryDelete() override = default;
 
@@ -2153,8 +2162,8 @@ public:
 class CommandObjectTypeFilterDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeFilterDelete(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemFilter) {}
+      : CommandObjectTypeFormatterDelete(interpreter,
+                                         eFormatCategoryItemFilter) {}
 
   ~CommandObjectTypeFilterDelete() override = default;
 };
@@ -2164,8 +2173,8 @@ public:
 class CommandObjectTypeSynthDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeSynthDelete(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemSynth) {}
+      : CommandObjectTypeFormatterDelete(interpreter,
+                                         eFormatCategoryItemSynth) {}
 
   ~CommandObjectTypeSynthDelete() override = default;
 };
@@ -2180,7 +2189,6 @@ public:
 
   ~CommandObjectTypeRecognizerDelete() override = default;
 };
-
 
 // CommandObjectTypeFilterClear
 
