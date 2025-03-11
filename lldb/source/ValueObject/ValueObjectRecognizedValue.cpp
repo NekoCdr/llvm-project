@@ -23,8 +23,9 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/Support/Error.h"
+
 #include <cstring>
-#include <optional>
 
 namespace lldb_private {
 class Declaration;
@@ -99,7 +100,7 @@ ValueObjectRecognizedValue::CalculateNumChildren(uint32_t max) {
   return m_parent->GetNumChildren(max);
 }
 
-std::optional<uint64_t> ValueObjectRecognizedValue::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectRecognizedValue::GetByteSize() {
   const bool success = UpdateValueIfNeeded(false);
   if (success && m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());

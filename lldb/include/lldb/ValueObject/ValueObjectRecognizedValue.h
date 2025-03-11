@@ -18,10 +18,11 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "llvm/Support/Error.h"
+
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 
 namespace lldb_private {
 class DataExtractor;
@@ -34,7 +35,7 @@ class ValueObjectRecognizedValue : public ValueObject {
 public:
   ~ValueObjectRecognizedValue() override = default;
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 

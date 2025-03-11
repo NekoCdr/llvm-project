@@ -2544,16 +2544,16 @@ void CommandObjectTypeRecognizerAdd::IOHandlerActivated(IOHandler &io_handler,
       "for\n"
       "        internal_dict: an LLDB support object not to be used\"\"\"\n";
 
-  StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+  lldb::LockableStreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
   if (output_sp && interactive) {
-    output_sp->PutCString(g_type_recognizer_addreader_instructions);
-    output_sp->Flush();
+    LockedStreamFile locked_stream = output_sp->Lock();
+    locked_stream.PutCString(g_type_recognizer_addreader_instructions);
   }
 }
 
 void CommandObjectTypeRecognizerAdd::IOHandlerInputComplete(
     IOHandler &io_handler, std::string &data) {
-  StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
+  LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
 #if LLDB_ENABLE_PYTHON
   ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
@@ -2573,9 +2573,9 @@ void CommandObjectTypeRecognizerAdd::IOHandlerInputComplete(
           std::string funct_name_str;
           if (interpreter->GenerateTypeScriptFunction(lines, funct_name_str)) {
             if (funct_name_str.empty()) {
-              error_sp->Printf("unable to obtain a valid function name from "
-                               "the script interpreter.\n");
-              error_sp->Flush();
+              LockedStreamFile locked_stream = error_sp->Lock();
+              locked_stream.Printf("unable to obtain a valid function name "
+                                   "from the script interpreter.\n");
             } else {
               // now I have a valid function name, let's add this as script
               // for every type in the list
@@ -2593,38 +2593,39 @@ void CommandObjectTypeRecognizerAdd::IOHandlerInputComplete(
                                     options->m_match_type, options->m_category,
                                     &error);
                   if (error.Fail()) {
-                    error_sp->Printf("error: %s\n", error.AsCString());
-                    error_sp->Flush();
+                    LockedStreamFile locked_stream = error_sp->Lock();
+                    locked_stream.Printf("error: %s\n", error.AsCString());
                     break;
                   };
                 } else {
-                  error_sp->Printf("error: invalid type name.\n");
-                  error_sp->Flush();
+                  LockedStreamFile locked_stream = error_sp->Lock();
+                  locked_stream.Printf("error: invalid type name.\n");
                   break;
                 }
               }
             }
           } else {
-            error_sp->Printf("error: unable to generate a function.\n");
-            error_sp->Flush();
+            LockedStreamFile locked_stream = error_sp->Lock();
+            locked_stream.Printf("error: unable to generate a function.\n");
           }
         } else {
-          error_sp->Printf("error: no script interpreter.\n");
-          error_sp->Flush();
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("error: no script interpreter.\n");
         }
       } else {
-        error_sp->Printf("error: internal synchronization information "
-                         "missing or invalid.\n");
-        error_sp->Flush();
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream.Printf("error: internal synchronization information "
+                             "missing or invalid.\n");
       }
     } else {
-      error_sp->Printf("error: empty function, didn't add python command.\n");
-      error_sp->Flush();
+      LockedStreamFile locked_stream = error_sp->Lock();
+      locked_stream.Printf(
+          "error: empty function, didn't add python command.\n");
     }
   } else {
-    error_sp->Printf(
+    LockedStreamFile locked_stream = error_sp->Lock();
+    locked_stream.Printf(
         "error: script interpreter missing, didn't add python command.\n");
-    error_sp->Flush();
   }
 #endif
   io_handler.SetIsDone(true);
