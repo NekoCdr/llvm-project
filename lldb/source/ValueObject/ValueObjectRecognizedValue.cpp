@@ -180,6 +180,12 @@ bool ValueObjectRecognizedValue::UpdateValue() {
     }
   }
 
+  if (m_error.Fail() && target) {
+    target->GetDebugger().GetAsyncErrorStream()->Printf(
+        "[%s 0x%016tx] Cast ERROR: %s\n", GetName().GetCString(),
+        m_parent->GetPointerValue(), m_error.AsCString());
+  }
+
   SetValueIsValid(false);
   return false;
 }
