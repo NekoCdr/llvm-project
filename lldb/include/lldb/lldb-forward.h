@@ -260,6 +260,7 @@ class Type;
 class TypeAndOrName;
 class TypeCategoryImpl;
 class TypeCategoryMap;
+class TypeRecognizerImpl;
 class TypeEnumMemberImpl;
 class TypeEnumMemberListImpl;
 class TypeFilterImpl;
@@ -465,6 +466,7 @@ typedef std::shared_ptr<lldb_private::TraceCursor> TraceCursorSP;
 typedef std::shared_ptr<lldb_private::Type> TypeSP;
 typedef std::weak_ptr<lldb_private::Type> TypeWP;
 typedef std::shared_ptr<lldb_private::TypeCategoryImpl> TypeCategoryImplSP;
+typedef std::shared_ptr<lldb_private::TypeRecognizerImpl> TypeRecognizerImplSP;
 typedef std::shared_ptr<lldb_private::TypeImpl> TypeImplSP;
 typedef std::shared_ptr<lldb_private::TypeMemberFunctionImpl>
     TypeMemberFunctionImplSP;
