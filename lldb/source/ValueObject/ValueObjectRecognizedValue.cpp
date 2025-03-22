@@ -158,7 +158,7 @@ bool ValueObjectRecognizedValue::UpdateValue() {
           SetValueDidChange(true);
 
         m_address = dynamic_address;
-        m_value.GetScalar() = m_address.GetLoadAddress(GetTargetSP().get());
+        m_value.GetScalar() = m_address.GetLoadAddress(target);
       }
 
       m_value.SetCompilerType(recognized_ct);
@@ -166,7 +166,6 @@ bool ValueObjectRecognizedValue::UpdateValue() {
       m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
 
       if (!m_error.Success()) {
-        llvm::dbgs() << "GetValueAsData failed\n";
         SetValueIsValid(false);
         return false;
       }
