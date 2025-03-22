@@ -8,13 +8,16 @@
 
 #include "TypeSystemClang.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <cstdint>
 #include <mutex>
 #include <memory>
 #include <optional>
@@ -6055,23 +6058,34 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
 
 std::optional<int64_t>
 TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
-                                    const clang::CXXRecordDecl *base) {
-  auto offsets =
-      getASTContext().getASTRecordLayout(derived).getBaseOffsetsMap();
-  clang::CXXRecordDecl *base_definition = base->getDefinition();
+                                    const clang::CXXRecordDecl *base,
+                                    clang::CXXBasePaths *paths) {
+  bool is_ambiguous = paths->isAmbiguous(base->getTypeForDecl()
+                                             ->getCanonicalTypeInternal()
+                                             ->getCanonicalTypeUnqualified());
+  if (is_ambiguous)
+    return std::nullopt;
 
-  if (offsets.count(base_definition))
-    return offsets[base_definition].getQuantity();
+  int64_t offset = 0;
 
-  if (offsets.size()) {
-    for (const auto& [parent_decl, offset]: offsets) {
-      if (auto parent_offset = TryToGetBaseOffset(parent_decl, base)) {
-        return *parent_offset + offset.getQuantity();
-      }
+  for (auto path_elem : llvm::reverse(paths->front())) {
+    const clang::CXXRecordDecl *base_decl =
+        path_elem.Base->getType()->getAsCXXRecordDecl();
+
+    if (path_elem.Base->isVirtual()) {
+      offset += getASTContext()
+                    .getASTRecordLayout(derived)
+                    .getVBaseClassOffset(base_decl)
+                    .getQuantity();
+      break;
     }
+    offset += getASTContext()
+                  .getASTRecordLayout(path_elem.Class)
+                  .getBaseClassOffset(base_decl)
+                  .getQuantity();
   }
 
-  return std::nullopt;
+  return offset;
 }
 
 Status
@@ -6084,14 +6098,33 @@ TypeSystemClang::GetInheritanceAddressOffset(const CompilerType source_ct,
   if (!source_decl || !target_decl)
     return Status("Record layout does not have C++ specific info!");
 
-  if (auto offset = TryToGetBaseOffset(target_decl, source_decl)) {
-    output_offset = -*offset;
-    return Status();
+  auto offset_error = [](const CompilerType *base,
+                         const CompilerType *derived) {
+    return Status::FromErrorStringWithFormat(
+        "Failure in offset calculation. '%s' is ambiguous base for '%s'",
+        base->GetTypeName().AsCString(), derived->GetTypeName().AsCString());
+  };
+
+  clang::CXXBasePaths paths;
+
+  // if downcast
+  GetCompleteDecl(target_decl);
+  if (target_decl->isDerivedFrom(source_decl, paths)) {
+    if (auto offset = TryToGetBaseOffset(target_decl, source_decl, &paths)) {
+      output_offset = -*offset;
+      return Status();
+    }
+    return offset_error(&source_ct, &target_ct);
   }
 
-  if (auto offset = TryToGetBaseOffset(source_decl, target_decl)) {
-    output_offset = *offset;
-    return Status();
+  // if upcast
+  GetCompleteDecl(source_decl);
+  if (source_decl->isDerivedFrom(target_decl, paths)) {
+    if (auto offset = TryToGetBaseOffset(source_decl, target_decl, &paths)) {
+      output_offset = *offset;
+      return Status();
+    }
+    return offset_error(&target_ct, &source_ct);
   }
 
   return Status("Given types are not related by inheritance.");

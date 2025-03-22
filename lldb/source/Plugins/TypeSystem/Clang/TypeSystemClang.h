@@ -1194,7 +1194,8 @@ private:
   /// Tries to get the offset between the given base and derived classes.
   /// Returns offset if *base is the base class for *derived.
   std::optional<int64_t> TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
-                                            const clang::CXXRecordDecl *base);
+                                            const clang::CXXRecordDecl *base,
+                                            clang::CXXBasePaths *paths);
 
   /// Emits information about this TypeSystem into the expression log.
   ///
