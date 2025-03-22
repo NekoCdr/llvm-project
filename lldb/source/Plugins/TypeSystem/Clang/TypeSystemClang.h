@@ -24,6 +24,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
@@ -39,6 +40,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
 class DWARFASTParserClang;
@@ -704,6 +706,8 @@ public:
                              CompilerType *target_type, // Can pass nullptr
                              bool check_cplusplus, bool check_objc) override;
 
+  bool IsRecognizeableType(lldb::opaque_compiler_type_t type) override;
+
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override;
 
   bool IsPointerType(lldb::opaque_compiler_type_t type,
@@ -882,6 +886,12 @@ public:
   CompilerType GetVirtualBaseClassAtIndex(lldb::opaque_compiler_type_t type,
                                           size_t idx,
                                           uint32_t *bit_offset_ptr) override;
+
+  /// Gets the offset between the given compiler types if they are related by
+  /// inheritance, or returns error.
+  Status GetInheritanceAddressOffset(const CompilerType source_ct,
+                                     const CompilerType target_ct,
+                                     int64_t &output_offset) override;
 
   CompilerDecl GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
                                       llvm::StringRef name) override;
@@ -1180,6 +1190,11 @@ private:
 
   bool IsTypeImpl(lldb::opaque_compiler_type_t type,
                   llvm::function_ref<bool(clang::QualType)> predicate) const;
+
+  /// Tries to get the offset between the given base and derived classes.
+  std::optional<int64_t> TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
+                                            const clang::CXXRecordDecl *base,
+                                            clang::CXXBasePaths *paths);
 
   /// Emits information about this TypeSystem into the expression log.
   ///

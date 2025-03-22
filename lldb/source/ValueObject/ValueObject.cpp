@@ -47,6 +47,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectDynamicValue.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRecognizedValue.h"
 #include "lldb/ValueObject/ValueObjectSyntheticFilter.h"
 #include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/lldb-private-types.h"
@@ -220,6 +221,7 @@ bool ValueObject::UpdateFormatsIfNeeded() {
         DataVisualization::GetSummaryFormat(*this, GetDynamicValueType()));
     SetSyntheticChildren(
         DataVisualization::GetSyntheticChildren(*this, GetDynamicValueType()));
+    SetTypeRecognizer(DataVisualization::GetTypeRecognizer(*this, eNoDynamicValues));
   }
 
   return any_change;
@@ -2033,13 +2035,37 @@ void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
   if (use_dynamic == eNoDynamicValues)
     return;
 
-  if (!m_dynamic_value && !IsDynamic()) {
-    ExecutionContext exe_ctx(GetExecutionContextRef());
-    Process *process = exe_ctx.GetProcessPtr();
-    if (process && process->IsPossibleDynamicValue(*this)) {
-      ClearDynamicTypeInformation();
-      m_dynamic_value = new ValueObjectDynamicValue(*this, use_dynamic);
+  if (m_dynamic_value || IsDynamic())
+    return;
+
+  // Returns boolean that indicates whether we should proceed with the default
+  // vtable-based method.
+  auto try_type_recognizer = [&]() -> bool {
+    if (!this->GetCompilerType().IsRecognizeableType()) {
+      return false;
     }
+    lldb::TypeRecognizerImplSP current_type_recognizer_sp(m_type_recognizer_sp);
+
+    UpdateFormatsIfNeeded();
+    if (m_type_recognizer_sp.get() == nullptr)
+      return false;
+    if (current_type_recognizer_sp == m_type_recognizer_sp && m_dynamic_value)
+      return true;
+
+    ClearDynamicTypeInformation();
+    m_dynamic_value = new ValueObjectRecognizedValue(*this, use_dynamic);
+
+    return true;
+  };
+
+  if (try_type_recognizer())
+    return;
+
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  Process *process = exe_ctx.GetProcessPtr();
+  if (process && process->IsPossibleDynamicValue(*this)) {
+    ClearDynamicTypeInformation();
+    m_dynamic_value = new ValueObjectDynamicValue(*this, use_dynamic);
   }
 }
 
@@ -3576,6 +3602,13 @@ void ValueObject::ClearUserVisibleData(uint32_t clear_mask) {
       eClearUserVisibleDataItemsSyntheticChildren) {
     if (m_synthetic_value)
       m_synthetic_value = nullptr;
+  }
+
+  if ((clear_mask & eClearUserVisibleDataItemsType) ==
+      eClearUserVisibleDataItemsType) {
+    if (IsDynamic() && m_parent->m_dynamic_value) {
+      m_parent->m_dynamic_value = nullptr;
+    }
   }
 }
 

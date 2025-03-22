@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/API/SBType.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/Status.h"
 
 #if LLDB_ENABLE_PYTHON
 
@@ -1856,6 +1860,57 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
   }
 
   return ret_val;
+}
+
+Status ScriptInterpreterPythonImpl::RecognizeType(
+    const char *p_function_name, const lldb::ValueObjectSP input_valobj,
+    CompilerType &output_ct, Address &output_addr) {
+  if (!p_function_name || p_function_name[0] == '\0' || !input_valobj.get())
+    return Status("No python function name");
+
+  Locker py_lock(this,
+                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+
+  PythonObject ret_val = SWIGBridge::LLDBSwigPythonCallRecognizerScript(
+      p_function_name, GetSessionDictionary().get(), input_valobj);
+
+  if (!ret_val.IsAllocated())
+    return Status("No python function result");
+
+  PyObject *out_py_valtype = ret_val.get();
+
+  if (!out_py_valtype || out_py_valtype == Py_None) {
+    Py_XDECREF(out_py_valtype);
+    return Status("No correct PyObject");
+  }
+
+  lldb::SBType *sb_type_ptr =
+      (lldb::SBType *)LLDBSWIGPython_CastPyObjectToSBType(out_py_valtype);
+
+  if (sb_type_ptr == nullptr) {
+    Py_XDECREF(out_py_valtype);
+    return Status("No SBType");
+  }
+
+  lldb::TypeImplSP type_sp =
+      SWIGBridge::LLDBSWIGPython_GetTypeImplSPFromSBType(sb_type_ptr);
+
+  output_ct = type_sp->GetCompilerType(true);
+
+  auto source_ct = input_valobj->IsPointerType()
+                       ? input_valobj->GetCompilerType().GetPointeeType()
+                       : input_valobj->GetCompilerType();
+  auto target_ct =
+      output_ct.IsPointerType() ? output_ct.GetPointeeType() : output_ct;
+
+  int64_t offset = 0;
+
+  // We ignore offset errors and assume that the user knows what they are doing.
+  Status err = source_ct.GetTypeSystem()->GetInheritanceAddressOffset(
+      source_ct, target_ct, offset);
+  output_addr = input_valobj->GetPointerValue() + offset;
+
+  return err;
 }
 
 bool ScriptInterpreterPythonImpl::FormatterCallbackFunction(

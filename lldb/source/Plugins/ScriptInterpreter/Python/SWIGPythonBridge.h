@@ -141,6 +141,11 @@ public:
       const lldb::ValueObjectSP &valobj_sp, void **pyfunct_wrapper,
       const lldb::TypeSummaryOptionsSP &options_sp, std::string &retval);
 
+  static PythonObject
+  LLDBSwigPythonCallRecognizerScript(const char *p_function_name,
+                                     const void *session_dictionary,
+                                     const lldb::ValueObjectSP &valobj_sp);
+
   static python::PythonObject
   LLDBSwigPythonCreateSyntheticProvider(const char *python_class_name,
                                         const char *session_dictionary_name,
@@ -171,6 +176,8 @@ public:
 
   static lldb::ValueObjectSP
   LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);
+
+  static lldb::TypeImplSP LLDBSWIGPython_GetTypeImplSPFromSBType(void *data);
 
   static bool LLDBSwigPython_UpdateSynthProviderInstance(PyObject *implementor);
 
@@ -266,6 +273,7 @@ void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBType(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 } // namespace python

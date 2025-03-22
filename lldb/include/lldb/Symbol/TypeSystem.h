@@ -26,8 +26,10 @@
 #include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"
@@ -197,6 +199,8 @@ public:
                                      CompilerType *target_type, // Can pass NULL
                                      bool check_cplusplus, bool check_objc) = 0;
 
+  virtual bool IsRecognizeableType(lldb::opaque_compiler_type_t type) = 0;
+
   virtual bool IsPointerType(lldb::opaque_compiler_type_t type,
                              CompilerType *pointee_type) = 0;
 
@@ -358,6 +362,10 @@ public:
   virtual CompilerType
   GetVirtualBaseClassAtIndex(lldb::opaque_compiler_type_t type, size_t idx,
                              uint32_t *bit_offset_ptr) = 0;
+
+  virtual Status GetInheritanceAddressOffset(const CompilerType source_ct,
+                                             const CompilerType target_ct,
+                                             int64_t &output_offset) = 0;
 
   virtual CompilerDecl GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
                                               llvm::StringRef name) {

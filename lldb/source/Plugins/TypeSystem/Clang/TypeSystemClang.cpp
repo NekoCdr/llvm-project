@@ -8,14 +8,19 @@
 
 #include "TypeSystemClang.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <cstdint>
 #include <mutex>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,6 +65,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -73,6 +79,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/ThreadSafeDenseMap.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
@@ -3704,6 +3711,24 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
+bool TypeSystemClang::IsRecognizeableType(lldb::opaque_compiler_type_t type) {
+  clang::QualType pointee_qual_type;
+  if (type) {
+    clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    switch (type_class) {
+    case clang::Type::Pointer:
+    case clang::Type::LValueReference:
+    case clang::Type::RValueReference:
+      return true;
+
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
 bool TypeSystemClang::IsScalarType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
@@ -6029,6 +6054,80 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
     break;
   }
   return CompilerType();
+}
+
+std::optional<int64_t>
+TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
+                                    const clang::CXXRecordDecl *base,
+                                    clang::CXXBasePaths *paths) {
+  bool is_ambiguous = paths->isAmbiguous(base->getTypeForDecl()
+                                             ->getCanonicalTypeInternal()
+                                             ->getCanonicalTypeUnqualified());
+  if (is_ambiguous)
+    return std::nullopt;
+
+  int64_t offset = 0;
+
+  for (auto path_elem : llvm::reverse(paths->front())) {
+    const clang::CXXRecordDecl *base_decl =
+        path_elem.Base->getType()->getAsCXXRecordDecl();
+
+    if (path_elem.Base->isVirtual()) {
+      offset += getASTContext()
+                    .getASTRecordLayout(derived)
+                    .getVBaseClassOffset(base_decl)
+                    .getQuantity();
+      break;
+    }
+    offset += getASTContext()
+                  .getASTRecordLayout(path_elem.Class)
+                  .getBaseClassOffset(base_decl)
+                  .getQuantity();
+  }
+
+  return offset;
+}
+
+Status
+TypeSystemClang::GetInheritanceAddressOffset(const CompilerType source_ct,
+                                             const CompilerType target_ct,
+                                             int64_t &output_offset) {
+  auto *source_decl = GetAsCXXRecordDecl(source_ct.GetOpaqueQualType());
+  auto *target_decl = GetAsCXXRecordDecl(target_ct.GetOpaqueQualType());
+
+  if (!source_decl || !target_decl)
+    return Status("Record layout does not have C++ specific info!");
+
+  auto offset_error = [](const CompilerType *base,
+                         const CompilerType *derived) {
+    return Status::FromErrorStringWithFormat(
+        "Failure in offset calculation. '%s' is ambiguous base for '%s'",
+        base->GetTypeName().AsCString(), derived->GetTypeName().AsCString());
+  };
+
+  clang::CXXBasePaths paths;
+
+  // if downcast
+  GetCompleteDecl(target_decl);
+  if (target_decl->isDerivedFrom(source_decl, paths)) {
+    if (auto offset = TryToGetBaseOffset(target_decl, source_decl, &paths)) {
+      output_offset = -*offset;
+      return Status();
+    }
+    return offset_error(&source_ct, &target_ct);
+  }
+
+  // if upcast
+  GetCompleteDecl(source_decl);
+  if (source_decl->isDerivedFrom(target_decl, paths)) {
+    if (auto offset = TryToGetBaseOffset(source_decl, target_decl, &paths)) {
+      output_offset = *offset;
+      return Status();
+    }
+    return offset_error(&target_ct, &source_ct);
+  }
+
+  return Status("Given types are not related by inheritance.");
 }
 
 CompilerDecl

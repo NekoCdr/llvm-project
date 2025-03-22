@@ -331,6 +331,11 @@ public:
     return CXXInfo->BaseSharingVBPtr;
   }
 
+  const BaseOffsetsMapTy &getBaseOffsetsMap() const {
+    assert(CXXInfo && "Record layout does not have C++ specific info!");
+    return CXXInfo->BaseOffsets;
+  }
+
   const VBaseOffsetsMapTy &getVBaseOffsetsMap() const {
     assert(CXXInfo && "Record layout does not have C++ specific info!");
     return CXXInfo->VBaseOffsets;

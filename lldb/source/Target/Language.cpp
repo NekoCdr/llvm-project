@@ -175,6 +175,11 @@ Language::GetHardcodedSynthetics() {
   return {};
 }
 
+HardcodedFormatters::HardcodedRecognizerFinder
+Language::GetHardcodedRecognizers() {
+  return {};
+}
+
 std::vector<FormattersMatchCandidate>
 Language::GetPossibleFormattersMatches(ValueObject &valobj,
                                        lldb::DynamicValueType use_dynamic) {

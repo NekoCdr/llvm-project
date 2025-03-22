@@ -9,6 +9,7 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 
+#include "lldb/Core/Address.h"
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_PYTHON
@@ -190,6 +191,10 @@ public:
                           StructuredData::ObjectSP &callee_wrapper_sp,
                           const TypeSummaryOptions &options,
                           std::string &retval) override;
+
+  Status RecognizeType(const char *p_function_name,
+                       const lldb::ValueObjectSP input_valobj,
+                       CompilerType &output_ct, Address &output_addr) override;
 
   bool FormatterCallbackFunction(const char *function_name,
                                  lldb::TypeImplSP type_impl_sp) override;
