@@ -175,7 +175,8 @@ Language::GetHardcodedSynthetics() {
   return {};
 }
 
-HardcodedFormatters::HardcodedRecognizerFinder Language::GetHardcodedRecognizers() {
+HardcodedFormatters::HardcodedRecognizerFinder
+Language::GetHardcodedRecognizers() {
   return {};
 }
 

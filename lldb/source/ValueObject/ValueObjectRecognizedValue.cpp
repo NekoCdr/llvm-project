@@ -142,15 +142,15 @@ bool ValueObjectRecognizedValue::UpdateValue() {
 
   CompilerType recognized_ct;
   Address dynamic_address;
-  m_error = m_parent->GetTypeRecognizer()->RecognizeObjectType(m_parent, recognized_ct, dynamic_address);
+  m_error = m_parent->GetTypeRecognizer()->RecognizeObjectType(
+      m_parent, recognized_ct, dynamic_address);
 
   if (m_error.Success() && recognized_ct && recognized_ct.IsValid()) {
     if (recognized_ct != this->GetCompilerType()) {
       ClearDynamicTypeInformation();
       SetValueDidChange(true);
 
-      m_type_impl = TypeImpl(m_parent->GetCompilerType(),
-                             recognized_ct);
+      m_type_impl = TypeImpl(m_parent->GetCompilerType(), recognized_ct);
       m_dynamic_type_info.SetCompilerType(recognized_ct);
 
       if (!m_address.IsValid() || m_address != dynamic_address) {

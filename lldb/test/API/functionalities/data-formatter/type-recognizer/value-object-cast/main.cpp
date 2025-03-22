@@ -1,4 +1,3 @@
-// NOLINTBEGIN(clang-diagnostic-non-virtual-dtor)
 enum class CastTarget {
   A_1,
   A_2,
@@ -51,7 +50,6 @@ enum class CastTarget {
 ///     \         /
 ///    [--- C_4 ---]
 ///
-
 
 //===-- [Base classes] ----------------------------------------------------===//
 
@@ -106,8 +104,7 @@ struct C_4 : B_1, virtual B_2 {
 //===-- [Function section] ------------------------------------------------===//
 
 template <class T> void cast_func(T *input_var) {
-  // NOLINTNEXTLINE(clang-diagnostic-unused-variable)
-  int o{0}; // Break here in cast_func().
+  [[maybe_unused]] int o{0}; // Break here in cast_func().
 }
 
 int main() {
@@ -150,4 +147,3 @@ int main() {
   c4_obj.target = CastTarget::A_1;
   cast_func<C_4>(&c4_obj);
 }
-// NOLINTEND(clang-diagnostic-non-virtual-dtor)

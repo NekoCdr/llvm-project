@@ -1192,7 +1192,6 @@ private:
                   llvm::function_ref<bool(clang::QualType)> predicate) const;
 
   /// Tries to get the offset between the given base and derived classes.
-  /// Returns offset if *base is the base class for *derived.
   std::optional<int64_t> TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
                                             const clang::CXXRecordDecl *base,
                                             clang::CXXBasePaths *paths);

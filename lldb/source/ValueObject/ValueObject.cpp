@@ -221,7 +221,6 @@ bool ValueObject::UpdateFormatsIfNeeded() {
         DataVisualization::GetSummaryFormat(*this, GetDynamicValueType()));
     SetSyntheticChildren(
         DataVisualization::GetSyntheticChildren(*this, GetDynamicValueType()));
-    // FIXME: I guess we're not interested in dynamic value for type recognizer
     SetTypeRecognizer(DataVisualization::GetTypeRecognizer(*this, eNoDynamicValues));
   }
 

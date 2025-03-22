@@ -101,32 +101,13 @@ public:
       return *this;
     }
 
-    // bool GetFrontEndWantsDereference() const {
-    //   return (m_flags & lldb::eTypeOptionFrontEndWantsDereference) ==
-    //          lldb::eTypeOptionFrontEndWantsDereference;
-    // }
-
-    // Flags &SetFrontEndWantsDereference(bool value = true) {
-    //   if (value)
-    //     m_flags |= lldb::eTypeOptionFrontEndWantsDereference;
-    //   else
-    //     m_flags &= ~lldb::eTypeOptionFrontEndWantsDereference;
-    //   return *this;
-    // }
-
-    // uint32_t GetValue() { return m_flags; }
-
-    // void SetValue(uint32_t value) { m_flags = value; }
-
   private:
     uint32_t m_flags = lldb::eTypeOptionCascade;
   };
 
-  TypeRecognizerImpl(const Flags &flags,
-                     const char *function_name,
+  TypeRecognizerImpl(const Flags &flags, const char *function_name,
                      const char *python_script = nullptr)
-    : m_flags(flags), m_function_name(), m_python_script()
-  {
+      : m_flags(flags), m_function_name(), m_python_script() {
     if (function_name)
       m_function_name.assign(function_name);
     if (python_script)
@@ -145,17 +126,18 @@ public:
 
   std::string GetDescription() {
     StreamString sstr;
-    sstr.Printf("%s%s%s Python function %s", Cascades() ? "" : " (not cascading)",
-                SkipsPointers() ? " (skip pointers)" : "",
-                SkipsReferences() ? " (skip references)" : "",
-                m_function_name.c_str());
+    sstr.Printf(
+        "%s%s%s Python function %s", Cascades() ? "" : " (not cascading)",
+        SkipsPointers() ? " (skip pointers)" : "",
+        SkipsReferences() ? " (skip references)" : "", m_function_name.c_str());
 
     return std::string(sstr.GetString());
   }
 
   typedef std::shared_ptr<TypeRecognizerImpl> SharedPointer;
 
-  Status RecognizeObjectType(ValueObject *valobj, CompilerType &output_ct, Address &output_addr) {
+  Status RecognizeObjectType(ValueObject *valobj, CompilerType &output_ct,
+                             Address &output_addr) {
     if (!valobj)
       return Status("No valobj");
 
