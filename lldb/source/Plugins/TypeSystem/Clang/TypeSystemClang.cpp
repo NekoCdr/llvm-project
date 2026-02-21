@@ -17,6 +17,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <cassert>
 #include <cstdint>
 #include <mutex>
 #include <memory>
@@ -3715,8 +3716,7 @@ bool TypeSystemClang::IsRecognizeableType(lldb::opaque_compiler_type_t type) {
   clang::QualType pointee_qual_type;
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
-    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
-    switch (type_class) {
+    switch (qual_type->getTypeClass()) {
     case clang::Type::Pointer:
     case clang::Type::LValueReference:
     case clang::Type::RValueReference:
@@ -6057,24 +6057,26 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
 }
 
 std::optional<int64_t>
-TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl *derived,
-                                    const clang::CXXRecordDecl *base,
-                                    clang::CXXBasePaths *paths) {
-  bool is_ambiguous = paths->isAmbiguous(base->getTypeForDecl()
+TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl &derived,
+                                    const clang::CXXRecordDecl &base,
+                                    clang::CXXBasePaths &paths) {
+  bool is_ambiguous = paths.isAmbiguous(base.getTypeForDecl()
                                              ->getCanonicalTypeInternal()
                                              ->getCanonicalTypeUnqualified());
-  if (is_ambiguous)
+  if (is_ambiguous) {
     return std::nullopt;
+  }
 
   int64_t offset = 0;
 
-  for (auto path_elem : llvm::reverse(paths->front())) {
+  for (auto path_elem : llvm::reverse(paths.front())) {
     const clang::CXXRecordDecl *base_decl =
         path_elem.Base->getType()->getAsCXXRecordDecl();
+    assert(base_decl && "CXXBasePathElement is not a C++ class?");
 
     if (path_elem.Base->isVirtual()) {
       offset += getASTContext()
-                    .getASTRecordLayout(derived)
+                    .getASTRecordLayout(&derived)
                     .getVBaseClassOffset(base_decl)
                     .getQuantity();
       break;
@@ -6095,39 +6097,52 @@ TypeSystemClang::GetInheritanceAddressOffset(const CompilerType source_ct,
   auto *source_decl = GetAsCXXRecordDecl(source_ct.GetOpaqueQualType());
   auto *target_decl = GetAsCXXRecordDecl(target_ct.GetOpaqueQualType());
 
-  if (!source_decl || !target_decl)
-    return Status("Record layout does not have C++ specific info!");
+  if (!source_decl) {
+    return Status::FromErrorStringWithFormat(
+        "Record layout '%s' does not have C++ specific info!",
+        source_ct.GetTypeName().AsCString());
+  }
+
+  if (!target_decl) {
+    return Status::FromErrorStringWithFormat(
+        "Record layout '%s' does not have C++ specific info!",
+        target_ct.GetTypeName().AsCString());
+  }
 
   auto offset_error = [](const CompilerType *base,
                          const CompilerType *derived) {
     return Status::FromErrorStringWithFormat(
-        "Failure in offset calculation. '%s' is ambiguous base for '%s'",
+        "Failure in offset calculation: '%s' is ambiguous base for '%s'",
         base->GetTypeName().AsCString(), derived->GetTypeName().AsCString());
   };
 
   clang::CXXBasePaths paths;
 
-  // if downcast
+  // Typical use case for type recognizers: downcast.
   GetCompleteDecl(target_decl);
   if (target_decl->isDerivedFrom(source_decl, paths)) {
-    if (auto offset = TryToGetBaseOffset(target_decl, source_decl, &paths)) {
+    if (std::optional<int64_t> offset =
+            TryToGetBaseOffset(*target_decl, *source_decl, paths)) {
       output_offset = -*offset;
       return Status();
     }
     return offset_error(&source_ct, &target_ct);
   }
 
-  // if upcast
+  // Less typical use case for type recognizers: upcast.
   GetCompleteDecl(source_decl);
   if (source_decl->isDerivedFrom(target_decl, paths)) {
-    if (auto offset = TryToGetBaseOffset(source_decl, target_decl, &paths)) {
+    if (std::optional<int64_t> offset =
+            TryToGetBaseOffset(*source_decl, *target_decl, paths)) {
       output_offset = *offset;
       return Status();
     }
     return offset_error(&target_ct, &source_ct);
   }
 
-  return Status("Given types are not related by inheritance.");
+  return Status::FromErrorStringWithFormat(
+      "Types '%s' and '%s' are not related by inheritance.",
+      source_ct.GetTypeName().AsCString(), target_ct.GetTypeName().AsCString());
 }
 
 CompilerDecl

@@ -19,6 +19,8 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include <limits>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -399,8 +401,8 @@ FormatManager::GetTypeRecognizerForType(lldb::TypeNameSpecifierImplSP type_sp) {
   lldb::TypeRecognizerImplSP filter_chosen_sp;
   uint32_t num_categories = m_categories_map.GetCount();
   lldb::TypeCategoryImplSP category_sp;
-  uint32_t prio_category = UINT32_MAX;
-  for (uint32_t category_id = 0; category_id < num_categories; category_id++) {
+  uint32_t prio_category = std::numeric_limits<uint32_t>::max();
+  for (uint32_t category_id = 0; category_id < num_categories; ++category_id) {
     category_sp = GetCategoryAtIndex(category_id);
     if (!category_sp->IsEnabled())
       continue;

@@ -11,6 +11,8 @@
 
 #include "lldb/DataFormatters/FormatCache.h"
 
+#include <mutex>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -125,7 +127,7 @@ void FormatCache::Set(ConstString type,
 }
 
 void FormatCache::Set(ConstString type, lldb::TypeRecognizerImplSP &recognizer_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  std::scoped_lock lock(m_mutex);
   m_entries[type].Set(recognizer_sp);
 }
 

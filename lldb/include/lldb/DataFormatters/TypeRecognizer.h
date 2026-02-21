@@ -134,7 +134,7 @@ public:
     return std::string(sstr.GetString());
   }
 
-  typedef std::shared_ptr<TypeRecognizerImpl> SharedPointer;
+  using SharedPointer = std::shared_ptr<TypeRecognizerImpl>;
 
   Status RecognizeObjectType(ValueObject *valobj, CompilerType &output_ct,
                              Address &output_addr) {

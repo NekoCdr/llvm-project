@@ -2040,7 +2040,7 @@ void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
 
   // Returns boolean that indicates whether we should proceed with the default
   // vtable-based method.
-  auto try_type_recognizer = [&]() -> bool {
+  auto has_type_recognizer = [&]() -> bool {
     if (!this->GetCompilerType().IsRecognizeableType()) {
       return false;
     }
@@ -2058,7 +2058,7 @@ void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
     return true;
   };
 
-  if (try_type_recognizer())
+  if (has_type_recognizer())
     return;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -3606,7 +3606,8 @@ void ValueObject::ClearUserVisibleData(uint32_t clear_mask) {
 
   if ((clear_mask & eClearUserVisibleDataItemsType) ==
       eClearUserVisibleDataItemsType) {
-    if (IsDynamic() && m_parent->m_dynamic_value) {
+    if (IsDynamic()) {
+      // When we aren't dynamic, m_parent is nullptr.
       m_parent->m_dynamic_value = nullptr;
     }
   }

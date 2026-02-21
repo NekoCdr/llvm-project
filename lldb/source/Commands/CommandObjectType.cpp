@@ -2385,7 +2385,7 @@ Status CommandObjectTypeRecognizerAdd::CommandOptions::SetOptionValue(
     m_flags.SetCascades(OptionArgParser::ToBoolean(option_arg, true, &success));
     if (!success)
       error.FromErrorStringWithFormat("invalid value for cascade: %s",
-                                     option_arg.str().c_str());
+                                      option_arg.str().c_str());
     break;
   case 'P':
     handwrite_python = true;

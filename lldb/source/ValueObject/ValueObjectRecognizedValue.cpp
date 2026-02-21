@@ -21,11 +21,13 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/Support/Error.h"
 
 #include <cstring>
+#include <limits>
 
 namespace lldb_private {
 class Declaration;
@@ -41,44 +43,41 @@ ValueObjectRecognizedValue::ValueObjectRecognizedValue(
 }
 
 CompilerType ValueObjectRecognizedValue::GetCompilerTypeImpl() {
-  const bool success = UpdateValueIfNeeded(false);
-  if (success) {
-    if (m_dynamic_type_info.HasType())
+  if (UpdateValueIfNeeded(/*update_format=*/false)) {
+    if (m_dynamic_type_info.HasType()) {
+      assert(GetValueIsValid());
       return m_value.GetCompilerType();
+    }
     return m_parent->GetCompilerType();
   }
   return m_parent->GetCompilerType();
 }
 
 ConstString ValueObjectRecognizedValue::GetTypeName() {
-  const bool success = UpdateValueIfNeeded(false);
-  if (success) {
-    if (m_dynamic_type_info.HasName())
-      return m_dynamic_type_info.GetName();
+  if (UpdateValueIfNeeded(/*update_format=*/false) &&
+      m_dynamic_type_info.HasName()) {
+    return m_dynamic_type_info.GetName();
   }
   return m_parent->GetTypeName();
 }
 
 TypeImpl ValueObjectRecognizedValue::GetTypeImpl() {
-  const bool success = UpdateValueIfNeeded(false);
-  if (success && m_type_impl.IsValid()) {
+  if (UpdateValueIfNeeded(/*update_format=*/false) && m_type_impl.IsValid()) {
     return m_type_impl;
   }
   return m_parent->GetTypeImpl();
 }
 
 ConstString ValueObjectRecognizedValue::GetQualifiedTypeName() {
-  const bool success = UpdateValueIfNeeded(false);
-  if (success) {
-    if (m_dynamic_type_info.HasName())
-      return m_dynamic_type_info.GetName();
+  if (UpdateValueIfNeeded(/*update_format=*/false) &&
+      m_dynamic_type_info.HasName()) {
+    return m_dynamic_type_info.GetName();
   }
   return m_parent->GetQualifiedTypeName();
 }
 
 ConstString ValueObjectRecognizedValue::GetDisplayTypeName() {
-  const bool success = UpdateValueIfNeeded(false);
-  if (success) {
+  if (UpdateValueIfNeeded(/*update_format=*/false)) {
     if (m_dynamic_type_info.HasType())
       return GetCompilerType().GetDisplayTypeName();
     if (m_dynamic_type_info.HasName())
@@ -89,10 +88,11 @@ ConstString ValueObjectRecognizedValue::GetDisplayTypeName() {
 
 llvm::Expected<uint32_t>
 ValueObjectRecognizedValue::CalculateNumChildren(uint32_t max) {
-  const bool success = UpdateValueIfNeeded(false);
-  if (success && m_dynamic_type_info.HasType()) {
+  if (UpdateValueIfNeeded(/*update_format=*/false) &&
+      m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
+    llvm::Expected<uint32_t> children_count =
+        GetCompilerType().GetNumChildren(true, &exe_ctx);
     if (!children_count)
       return children_count;
     return *children_count <= max ? *children_count : max;
@@ -101,10 +101,16 @@ ValueObjectRecognizedValue::CalculateNumChildren(uint32_t max) {
 }
 
 llvm::Expected<uint64_t> ValueObjectRecognizedValue::GetByteSize() {
-  const bool success = UpdateValueIfNeeded(false);
-  if (success && m_dynamic_type_info.HasType()) {
+  Status err;
+  if (UpdateValueIfNeeded(/*update_format=*/false) &&
+      m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    return m_value.GetValueByteSize(nullptr, &exe_ctx);
+    assert(GetValueIsValid());
+    uint64_t byte_size = m_value.GetValueByteSize(&err, &exe_ctx);
+    if (err.Fail()) {
+      return err.takeError();
+    }
+    return byte_size;
   }
   return m_parent->GetByteSize();
 }
@@ -117,15 +123,14 @@ bool ValueObjectRecognizedValue::UpdateValue() {
   SetValueIsValid(false);
   m_error.Clear();
 
-  if (!m_parent->UpdateValueIfNeeded(false)) {
-    // The dynamic value failed to get an error, pass the error along
+  if (!m_parent->UpdateValueIfNeeded(/*update_format=*/false)) {
     if (m_error.Success() && m_parent->GetError().Fail())
       m_error = m_parent->GetError().Clone();
     return false;
   }
 
-  // Setting our type_sp to NULL will route everything back through our parent
-  // which is equivalent to not using dynamic values.
+  // Clearing m_dynamic_type_info will route everything back through our parent,
+  // which is equivalent to not using dynamic value.
   if (m_use_dynamic == lldb::eNoDynamicValues) {
     m_dynamic_type_info.Clear();
     return true;
@@ -133,17 +138,19 @@ bool ValueObjectRecognizedValue::UpdateValue() {
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
   Target *target = exe_ctx.GetTargetPtr();
-  if (target) {
-    m_data.SetByteOrder(target->GetArchitecture().GetByteOrder());
-    m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
-  }
+  assert(target);
+
+  m_data.SetByteOrder(target->GetArchitecture().GetByteOrder());
+  m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
 
   Value old_value(m_value);
 
   CompilerType recognized_ct;
   Address dynamic_address;
-  m_error = m_parent->GetTypeRecognizer()->RecognizeObjectType(
-      m_parent, recognized_ct, dynamic_address);
+  lldb::TypeRecognizerImplSP recognizer_sp = m_parent->GetTypeRecognizer();
+  assert(recognizer_sp);
+  m_error = recognizer_sp->RecognizeObjectType(m_parent, recognized_ct,
+                                               dynamic_address);
 
   if (m_error.Success() && recognized_ct && recognized_ct.IsValid()) {
     if (recognized_ct != this->GetCompilerType()) {
@@ -154,33 +161,29 @@ bool ValueObjectRecognizedValue::UpdateValue() {
       m_dynamic_type_info.SetCompilerType(recognized_ct);
 
       if (!m_address.IsValid() || m_address != dynamic_address) {
-        if (m_address.IsValid())
-          SetValueDidChange(true);
-
         m_address = dynamic_address;
         m_value.GetScalar() = m_address.GetLoadAddress(target);
       }
 
       m_value.SetCompilerType(recognized_ct);
       m_value.SetValueType(Value::ValueType::Scalar);
-      m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
 
+      m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
       if (!m_error.Success()) {
         SetValueIsValid(false);
         return false;
       }
 
       Log *log = GetLog(LLDBLog::Types);
-      LLDB_LOGF(log, "[%s %p] has a new dynamic type %s",
-                GetName().GetCString(), static_cast<void *>(this),
-                GetTypeName().GetCString());
+      LLDB_LOGF(log, "[%s %p] has new dynamic type %s", GetName().GetCString(),
+                static_cast<void *>(this), GetTypeName().GetCString());
 
       SetValueIsValid(true);
       return true;
     }
   }
 
-  if (m_error.Fail() && target) {
+  if (m_error.Fail()) {
     target->GetDebugger().GetAsyncErrorStream()->Printf(
         "[%s 0x%016tx] Cast ERROR: %s\n", GetName().GetCString(),
         m_parent->GetPointerValue(), m_error.AsCString());
@@ -194,16 +197,18 @@ bool ValueObjectRecognizedValue::IsInScope() { return m_parent->IsInScope(); }
 
 bool ValueObjectRecognizedValue::SetValueFromCString(const char *value_str,
                                                      Status &error) {
-  if (!UpdateValueIfNeeded(false)) {
-    error.FromErrorString("unable to read value");
+  if (!UpdateValueIfNeeded(/*update_format=*/false)) {
+    error = m_error.Clone();
     return false;
   }
 
-  uint64_t my_value = GetValueAsUnsigned(UINT64_MAX);
-  uint64_t parent_value = m_parent->GetValueAsUnsigned(UINT64_MAX);
+  uint64_t my_value = GetValueAsUnsigned(std::numeric_limits<uint64_t>::max());
+  uint64_t parent_value =
+      m_parent->GetValueAsUnsigned(std::numeric_limits<uint64_t>::max());
 
-  if (my_value == UINT64_MAX || parent_value == UINT64_MAX) {
-    error.FromErrorString("unable to read value");
+  if (my_value == std::numeric_limits<uint64_t>::max() ||
+      parent_value == std::numeric_limits<uint64_t>::max()) {
+    error.FromErrorString("This ValueObject is not in a writteble state");
     return false;
   }
 
@@ -221,21 +226,26 @@ bool ValueObjectRecognizedValue::SetValueFromCString(const char *value_str,
     }
   }
 
-  bool ret_val = m_parent->SetValueFromCString(value_str, error);
-  SetNeedsUpdate();
-  return ret_val;
+  bool parent_value_was_changed =
+      m_parent->SetValueFromCString(value_str, error);
+  if (parent_value_was_changed)
+    SetNeedsUpdate();
+
+  return parent_value_was_changed;
 }
 
 bool ValueObjectRecognizedValue::SetData(DataExtractor &data, Status &error) {
-  if (!UpdateValueIfNeeded(false)) {
+  if (!UpdateValueIfNeeded(/*update_format=*/false)) {
     error.FromErrorString("unable to read value");
     return false;
   }
 
-  uint64_t my_value = GetValueAsUnsigned(UINT64_MAX);
-  uint64_t parent_value = m_parent->GetValueAsUnsigned(UINT64_MAX);
+  uint64_t my_value = GetValueAsUnsigned(std::numeric_limits<uint64_t>::max());
+  uint64_t parent_value =
+      m_parent->GetValueAsUnsigned(std::numeric_limits<uint64_t>::max());
 
-  if (my_value == UINT64_MAX || parent_value == UINT64_MAX) {
+  if (my_value == std::numeric_limits<uint64_t>::max() ||
+      parent_value == std::numeric_limits<uint64_t>::max()) {
     error.FromErrorString("unable to read value");
     return false;
   }
@@ -256,55 +266,49 @@ bool ValueObjectRecognizedValue::SetData(DataExtractor &data, Status &error) {
     }
   }
 
-  bool ret_val = m_parent->SetData(data, error);
-  SetNeedsUpdate();
-  return ret_val;
+  bool parent_value_was_changed = m_parent->SetData(data, error);
+  if (parent_value_was_changed)
+    SetNeedsUpdate();
+
+  return parent_value_was_changed;
 }
 
 void ValueObjectRecognizedValue::SetPreferredDisplayLanguage(
     lldb::LanguageType lang) {
   this->ValueObject::SetPreferredDisplayLanguage(lang);
-  if (m_parent)
-    m_parent->SetPreferredDisplayLanguage(lang);
+  assert(m_parent);
+  m_parent->SetPreferredDisplayLanguage(lang);
 }
 
 lldb::LanguageType ValueObjectRecognizedValue::GetPreferredDisplayLanguage() {
   if (m_preferred_display_language == lldb::eLanguageTypeUnknown) {
-    if (m_parent)
-      return m_parent->GetPreferredDisplayLanguage();
-    return lldb::eLanguageTypeUnknown;
+    assert(m_parent);
+    return m_parent->GetPreferredDisplayLanguage();
   }
   return m_preferred_display_language;
 }
 
 bool ValueObjectRecognizedValue::IsSyntheticChildrenGenerated() {
-  if (m_parent)
-    return m_parent->IsSyntheticChildrenGenerated();
-  return false;
+  assert(m_parent);
+  return m_parent->IsSyntheticChildrenGenerated();
 }
 
-void ValueObjectRecognizedValue::SetSyntheticChildrenGenerated(bool b) {
-  if (m_parent)
-    m_parent->SetSyntheticChildrenGenerated(b);
-  this->ValueObject::SetSyntheticChildrenGenerated(b);
+void ValueObjectRecognizedValue::SetSyntheticChildrenGenerated(bool value) {
+  assert(m_parent);
+  m_parent->SetSyntheticChildrenGenerated(value);
 }
 
 bool ValueObjectRecognizedValue::GetDeclaration(Declaration &decl) {
-  if (m_parent)
-    return m_parent->GetDeclaration(decl);
-
-  return ValueObject::GetDeclaration(decl);
+  assert(m_parent);
+  return m_parent->GetDeclaration(decl);
 }
 
 uint64_t ValueObjectRecognizedValue::GetLanguageFlags() {
-  if (m_parent)
-    return m_parent->GetLanguageFlags();
-  return this->ValueObject::GetLanguageFlags();
+  assert(m_parent);
+  return m_parent->GetLanguageFlags();
 }
 
 void ValueObjectRecognizedValue::SetLanguageFlags(uint64_t flags) {
-  if (m_parent)
-    m_parent->SetLanguageFlags(flags);
-  else
-    this->ValueObject::SetLanguageFlags(flags);
+  assert(m_parent);
+  m_parent->SetLanguageFlags(flags);
 }

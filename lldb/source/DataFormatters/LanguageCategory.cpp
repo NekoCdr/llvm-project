@@ -70,7 +70,7 @@ LanguageCategory::Get<lldb::SyntheticChildrenSP>(FormattersMatchData &,
                                                  lldb::SyntheticChildrenSP &);
 template bool
 LanguageCategory::Get<lldb::TypeRecognizerImplSP>(FormattersMatchData &,
-                                                 lldb::TypeRecognizerImplSP &);
+                                                  lldb::TypeRecognizerImplSP &);
 /// \}
 
 template <>

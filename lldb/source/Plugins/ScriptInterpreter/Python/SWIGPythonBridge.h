@@ -143,7 +143,7 @@ public:
 
   static PythonObject
   LLDBSwigPythonCallRecognizerScript(const char *p_function_name,
-                                     const void *session_dictionary,
+                                     PyObject *session_dictionary,
                                      const lldb::ValueObjectSP &valobj_sp);
 
   static python::PythonObject

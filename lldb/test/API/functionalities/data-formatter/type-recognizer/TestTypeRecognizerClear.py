@@ -1,9 +1,4 @@
-"""
-Test lldb data formatter subsystem.
-"""
-
-
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import TestBase
 
 
 class TypeRecognizerListTestCase(TestBase):
@@ -14,6 +9,8 @@ class TypeRecognizerListTestCase(TestBase):
         self.runCmd("type recognizer add Bar -F test -w BarCat")
         self.runCmd("type recognizer add Zoo -F test -w ZooCat")
 
+        self.runCmd("type recognizer clear ZooCat")
+        # We shouldn't fails with double clear too.
         self.runCmd("type recognizer clear ZooCat")
         self.expect(
             "type recognizer list",

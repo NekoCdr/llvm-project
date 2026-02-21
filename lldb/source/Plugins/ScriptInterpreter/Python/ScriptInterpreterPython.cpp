@@ -11,6 +11,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/Status.h"
+#include "pytypedefs.h"
 
 #if LLDB_ENABLE_PYTHON
 
@@ -1865,14 +1866,21 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
 Status ScriptInterpreterPythonImpl::RecognizeType(
     const char *p_function_name, const lldb::ValueObjectSP input_valobj,
     CompilerType &output_ct, Address &output_addr) {
-  if (!p_function_name || p_function_name[0] == '\0' || !input_valobj.get())
+  if (!p_function_name || p_function_name[0] == '\0')
     return Status("No python function name");
+
+  if (!input_valobj.get())
+    return Status("Input ValueObject is incorrect");
+
+  PyObject *session_dict = GetSessionDictionary().get();
+  if (!session_dict)
+    return Status("Session dictionary is incorrect");
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
 
   PythonObject ret_val = SWIGBridge::LLDBSwigPythonCallRecognizerScript(
-      p_function_name, GetSessionDictionary().get(), input_valobj);
+      p_function_name, session_dict, input_valobj);
 
   if (!ret_val.IsAllocated())
     return Status("No python function result");
@@ -1897,10 +1905,11 @@ Status ScriptInterpreterPythonImpl::RecognizeType(
 
   output_ct = type_sp->GetCompilerType(true);
 
-  auto source_ct = input_valobj->IsPointerType()
-                       ? input_valobj->GetCompilerType().GetPointeeType()
-                       : input_valobj->GetCompilerType();
-  auto target_ct =
+  CompilerType source_ct =
+      input_valobj->IsPointerType()
+          ? input_valobj->GetCompilerType().GetPointeeType()
+          : input_valobj->GetCompilerType();
+  CompilerType target_ct =
       output_ct.IsPointerType() ? output_ct.GetPointeeType() : output_ct;
 
   int64_t offset = 0;

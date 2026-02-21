@@ -180,21 +180,21 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 
 PythonObject
 lldb_private::python::SWIGBridge::LLDBSwigPythonCallRecognizerScript(
-    const char *p_function_name, const void *session_dictionary,
+    const char *p_function_name, PyObject *session_dictionary,
     const lldb::ValueObjectSP &valobj_sp) {
-
-  if (!p_function_name || p_function_name[0] == '\0' || !session_dictionary)
-    return PythonObject();
+  assert(p_function_name);
+  assert(p_function_name[0] != '\0');
+  assert(session_dictionary);
+  assert(valobj_sp);
 
   PyErr_Cleaner py_err_cleaner(true); // show Python errors
 
-  PyObject *py_dict = (PyObject *)session_dictionary;
-  if (!PythonDictionary::Check(py_dict))
+  if (!PythonDictionary::Check(session_dictionary))
     return PythonObject();
 
-  PythonDictionary dict(PyRefType::Borrowed, py_dict);
+  PythonDictionary dict(PyRefType::Borrowed, session_dictionary);
 
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+  PythonCallable pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
       p_function_name, dict);
 
   assert(PyFunction_Check(pfunc.get()));
@@ -208,6 +208,7 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonCallRecognizerScript(
   }
 
   auto sb_value = std::unique_ptr<lldb::SBValue>(new lldb::SBValue(valobj_sp));
+  assert(sb_value->IsValid());
   sb_value->SetPreferDynamicValue(lldb::eNoDynamicValues);
 
   PythonObject val_arg = SWIGBridge::ToSWIGWrapper(std::move(sb_value));
@@ -614,8 +615,8 @@ void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBType(PyObject *data) {
   lldb::SBType *sb_ptr = NULL;
 
-  int valid_cast =
-      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBType, 0);
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBType, /*flags=*/0);
 
   if (valid_cast == -1)
     return NULL;
@@ -1062,7 +1063,7 @@ lldb_private::python::SWIGBridge::LLDBSWIGPython_GetTypeImplSPFromSBType(
     void *data) {
   lldb::TypeImplSP type_impl_sp;
   if (data) {
-    lldb::SBType *sb_ptr = (lldb::SBType *)data;
+    lldb::SBType *sb_ptr = static_cast<lldb::SBType *>(data);
     type_impl_sp = sb_ptr->GetSP();
   }
   return type_impl_sp;

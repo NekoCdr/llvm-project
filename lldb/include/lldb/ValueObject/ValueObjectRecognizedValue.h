@@ -29,8 +29,6 @@ class DataExtractor;
 class Declaration;
 class Status;
 
-/// A ValueObject that represents memory at a given address, viewed as some
-/// set lldb type.
 class ValueObjectRecognizedValue : public ValueObject {
 public:
   ~ValueObjectRecognizedValue() override = default;
@@ -60,11 +58,11 @@ public:
   bool GetIsConstant() const override { return false; }
 
   ValueObject *GetParent() override {
-    return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
+    return (m_parent != nullptr) ? m_parent->GetParent() : nullptr;
   }
 
   const ValueObject *GetParent() const override {
-    return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
+    return (m_parent != nullptr) ? m_parent->GetParent() : nullptr;
   }
 
   lldb::ValueObjectSP GetStaticValue() override { return m_parent->GetSP(); }
@@ -85,7 +83,7 @@ public:
 
   bool IsSyntheticChildrenGenerated() override;
 
-  void SetSyntheticChildrenGenerated(bool b) override;
+  void SetSyntheticChildrenGenerated(bool value) override;
 
   bool GetDeclaration(Declaration &decl) override;
 
@@ -108,8 +106,8 @@ protected:
 
   CompilerType GetCompilerTypeImpl() override;
 
-  Address m_address; ///< The variable that this value object is based upon
-  TypeAndOrName m_dynamic_type_info; // We can have a type_sp or just a name
+  Address m_address;
+  TypeAndOrName m_dynamic_type_info;
   lldb::DynamicValueType m_use_dynamic;
   TypeImpl m_type_impl;
 

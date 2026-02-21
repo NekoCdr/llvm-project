@@ -1,9 +1,4 @@
-"""
-Test lldb data formatter subsystem.
-"""
-
-
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import TestBase
 
 
 class TypeRecognizerListTestCase(TestBase):
