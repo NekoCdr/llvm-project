@@ -156,8 +156,13 @@ public:
         m_function_name.c_str(), valobj->GetSP(), output_ct, output_addr);
   }
 
+  uint32_t GetPtrMatchDepth() { return m_ptr_match_depth; }
+
+  void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
+
 private:
   uint32_t m_my_revision = 0;
+  uint32_t m_ptr_match_depth = 1;
   Flags m_flags;
   std::string m_function_name;
   std::string m_python_script;

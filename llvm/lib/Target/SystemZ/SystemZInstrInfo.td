@@ -424,8 +424,10 @@ defm CondStore64 : CondStores<GR64, simple_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
-def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+let isMoveReg = 1 in {
+  def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
+  def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+}
 
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTR  : UnaryRR <"ltr",  0x12,   null_frag, GR32, GR32>;
@@ -459,7 +461,8 @@ def LLGFI : InstAlias<"llgfi\t$R1, $RI1", (LLILF GR64:$R1, imm64lf32:$RI1)>;
 def LLGHI : InstAlias<"llghi\t$R1, $RI1", (LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
-let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1,
+    isReMaterializable = 1 in {
   // Expands to L, LY or LFH, depending on the choice of register.
   def LMux : UnaryRXYPseudo<"l", z_load, GRX32, 4>,
              Requires<[FeatureHighWord]>;
@@ -480,7 +483,7 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTG : UnaryRXY<"ltg", 0xE302, z_load, GR64, 8>;
 }
 
-let canFoldAsLoad = 1 in {
+let canFoldAsLoad = 1, isReMaterializable =1 in {
   def LRL  : UnaryRILPC<"lrl",  0xC4D, aligned_z_load, GR32>;
   def LGRL : UnaryRILPC<"lgrl", 0xC48, aligned_z_load, GR64>;
 }
