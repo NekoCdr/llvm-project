@@ -33,6 +33,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -47,7 +48,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
-#include "lldb/Symbol/CompilerType.h"
 
 #include <cstdio>
 #include <cstdlib>

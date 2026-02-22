@@ -647,7 +647,8 @@ template <typename ImplSP> const char *FormatterKind;
 template <> const char *FormatterKind<lldb::TypeFormatImplSP> = "format";
 template <> const char *FormatterKind<lldb::TypeSummaryImplSP> = "summary";
 template <> const char *FormatterKind<lldb::SyntheticChildrenSP> = "synthetic";
-template <> const char *FormatterKind<lldb::TypeRecognizerImplSP> = "recognizer";
+template <>
+const char *FormatterKind<lldb::TypeRecognizerImplSP> = "recognizer";
 } // namespace
 
 #define FORMAT_LOG(Message) "[%s] " Message, FormatterKind<ImplSP>

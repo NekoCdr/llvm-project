@@ -41,7 +41,8 @@ public:
   typedef HardcodedFormatterFinders<TypeFormatImpl> HardcodedFormatFinder;
   typedef HardcodedFormatterFinders<TypeSummaryImpl> HardcodedSummaryFinder;
   typedef HardcodedFormatterFinders<SyntheticChildren> HardcodedSyntheticFinder;
-  typedef HardcodedFormatterFinders<TypeRecognizerImpl> HardcodedRecognizerFinder;
+  typedef HardcodedFormatterFinders<TypeRecognizerImpl>
+      HardcodedRecognizerFinder;
 };
 
 class FormattersMatchCandidate {

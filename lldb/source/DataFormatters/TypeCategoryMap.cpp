@@ -220,9 +220,8 @@ TypeCategoryMap::Get<lldb::TypeSummaryImplSP>(FormattersMatchData &match_data,
                                               lldb::TypeSummaryImplSP &retval);
 template void TypeCategoryMap::Get<lldb::SyntheticChildrenSP>(
     FormattersMatchData &match_data, lldb::SyntheticChildrenSP &retval);
-template void
-TypeCategoryMap::Get<lldb::TypeRecognizerImplSP>(FormattersMatchData &match_data,
-                                                 lldb::TypeRecognizerImplSP &retval);
+template void TypeCategoryMap::Get<lldb::TypeRecognizerImplSP>(
+    FormattersMatchData &match_data, lldb::TypeRecognizerImplSP &retval);
 /// \}
 
 void TypeCategoryMap::ForEach(ForEachCallback callback) {

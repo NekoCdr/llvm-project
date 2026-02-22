@@ -13,16 +13,16 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTConsumers.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include <cassert>
 #include <cstdint>
-#include <mutex>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>

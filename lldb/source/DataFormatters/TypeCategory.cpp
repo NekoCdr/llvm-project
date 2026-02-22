@@ -16,8 +16,8 @@ using namespace lldb_private;
 TypeCategoryImpl::TypeCategoryImpl(IFormatChangeListener *clist,
                                    ConstString name)
     : m_format_cont(clist), m_summary_cont(clist), m_filter_cont(clist),
-      m_synth_cont(clist), m_recognizer_cont(clist), m_enabled(false), m_change_listener(clist),
-      m_mutex(), m_name(name), m_languages() {}
+      m_synth_cont(clist), m_recognizer_cont(clist), m_enabled(false),
+      m_change_listener(clist), m_mutex(), m_name(name), m_languages() {}
 
 static bool IsApplicable(lldb::LanguageType category_lang,
                          lldb::LanguageType valobj_lang) {

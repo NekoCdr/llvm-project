@@ -2192,11 +2192,12 @@ public:
 
 // CommandObjectTypeRecognizerDelete
 
-class CommandObjectTypeRecognizerDelete : public CommandObjectTypeFormatterDelete {
+class CommandObjectTypeRecognizerDelete
+    : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeRecognizerDelete(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterDelete(
-            interpreter, eFormatCategoryItemRecognizer) {}
+      : CommandObjectTypeFormatterDelete(interpreter,
+                                         eFormatCategoryItemRecognizer) {}
 
   ~CommandObjectTypeRecognizerDelete() override = default;
 };
@@ -2223,7 +2224,8 @@ public:
 
 // CommandObjectTypeRecognizerClear
 
-class CommandObjectTypeRecognizerClear : public CommandObjectTypeFormatterClear {
+class CommandObjectTypeRecognizerClear
+    : public CommandObjectTypeFormatterClear {
 public:
   CommandObjectTypeRecognizerClear(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterClear(
@@ -3319,18 +3321,19 @@ public:
 class CommandObjectTypeRecognizer : public CommandObjectMultiword {
 public:
   CommandObjectTypeRecognizer(CommandInterpreter &interpreter)
-      : CommandObjectMultiword(
-            interpreter, "type recognizer",
-            "Commands for editing dynamic type recognizers.",
-            "type summary [<sub-command-options>] ") {
+      : CommandObjectMultiword(interpreter, "type recognizer",
+                               "Commands for editing dynamic type recognizers.",
+                               "type summary [<sub-command-options>] ") {
+    LoadSubCommand("add", CommandObjectSP(
+                              new CommandObjectTypeRecognizerAdd(interpreter)));
     LoadSubCommand(
-        "add", CommandObjectSP(new CommandObjectTypeRecognizerAdd(interpreter)));
+        "clear",
+        CommandObjectSP(new CommandObjectTypeRecognizerClear(interpreter)));
     LoadSubCommand(
-        "clear", CommandObjectSP(new CommandObjectTypeRecognizerClear(interpreter)));
-    LoadSubCommand("delete", CommandObjectSP(new CommandObjectTypeRecognizerDelete(
-                                 interpreter)));
-    LoadSubCommand(
-        "list", CommandObjectSP(new CommandObjectTypeRecognizerList(interpreter)));
+        "delete",
+        CommandObjectSP(new CommandObjectTypeRecognizerDelete(interpreter)));
+    LoadSubCommand("list", CommandObjectSP(new CommandObjectTypeRecognizerList(
+                               interpreter)));
     LoadSubCommand(
         "info",
         CommandObjectSP(new CommandObjectFormatterInfo<TypeRecognizerImpl>(

@@ -66,12 +66,13 @@ DataVisualization::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
 }
 
 lldb::TypeRecognizerImplSP
-DataVisualization::GetTypeRecognizer(ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
+DataVisualization::GetTypeRecognizer(ValueObject &valobj,
+                                     lldb::DynamicValueType use_dynamic) {
   return GetFormatManager().GetTypeRecognizer(valobj, use_dynamic);
 }
 
-lldb::TypeRecognizerImplSP
-DataVisualization::GetTypeRecognizerForType(lldb::TypeNameSpecifierImplSP type_sp) {
+lldb::TypeRecognizerImplSP DataVisualization::GetTypeRecognizerForType(
+    lldb::TypeNameSpecifierImplSP type_sp) {
   return GetFormatManager().GetTypeRecognizerForType(type_sp);
 }
 

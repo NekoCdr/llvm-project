@@ -284,7 +284,9 @@ public:
   void AddTypeRecognizer(llvm::StringRef name,
                          lldb::FormatterMatchType match_type,
                          lldb::TypeRecognizerImplSP recognizer_sp) {
-    AddTypeRecognizer(std::make_shared<lldb_private::TypeNameSpecifierImpl>(name, match_type), recognizer_sp);
+    AddTypeRecognizer(
+        std::make_shared<lldb_private::TypeNameSpecifierImpl>(name, match_type),
+        recognizer_sp);
   }
 
   bool DeleteTypeFormat(lldb::TypeNameSpecifierImplSP type_sp) {

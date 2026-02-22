@@ -75,7 +75,7 @@ template<> bool FormatCache::Entry::IsCached<lldb::TypeSummaryImplSP> () {
 template<> bool FormatCache::Entry::IsCached<lldb::SyntheticChildrenSP>() {
   return IsSyntheticCached();
 }
-template<> bool FormatCache::Entry::IsCached<lldb::TypeRecognizerImplSP>() {
+template <> bool FormatCache::Entry::IsCached<lldb::TypeRecognizerImplSP>() {
   return IsRecognizerCached();
 }
 
@@ -107,7 +107,7 @@ FormatCache::Get<lldb::SyntheticChildrenSP>(ConstString,
                                             lldb::SyntheticChildrenSP &);
 template bool
 FormatCache::Get<lldb::TypeRecognizerImplSP>(ConstString,
-                                            lldb::TypeRecognizerImplSP &);
+                                             lldb::TypeRecognizerImplSP &);
 /// \}
 
 void FormatCache::Set(ConstString type, lldb::TypeFormatImplSP &format_sp) {
@@ -126,7 +126,8 @@ void FormatCache::Set(ConstString type,
   m_entries[type].Set(synthetic_sp);
 }
 
-void FormatCache::Set(ConstString type, lldb::TypeRecognizerImplSP &recognizer_sp) {
+void FormatCache::Set(ConstString type,
+                      lldb::TypeRecognizerImplSP &recognizer_sp) {
   std::scoped_lock lock(m_mutex);
   m_entries[type].Set(recognizer_sp);
 }

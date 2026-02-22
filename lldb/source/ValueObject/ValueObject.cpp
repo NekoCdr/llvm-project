@@ -228,7 +228,8 @@ bool ValueObject::UpdateFormatsIfNeeded() {
         DataVisualization::GetSummaryFormat(*this, GetDynamicValueType()));
     SetSyntheticChildren(
         DataVisualization::GetSyntheticChildren(*this, GetDynamicValueType()));
-    SetTypeRecognizer(DataVisualization::GetTypeRecognizer(*this, eNoDynamicValues));
+    SetTypeRecognizer(
+        DataVisualization::GetTypeRecognizer(*this, eNoDynamicValues));
   }
 
   return any_change;
