@@ -362,7 +362,7 @@ public:
   GetVirtualBaseClassAtIndex(lldb::opaque_compiler_type_t type, size_t idx,
                              uint32_t *bit_offset_ptr) = 0;
 
-  virtual Status GetInheritanceAddressOffset(const CompilerType source_ct,
+  virtual Status GetBaseClassSubobjectOffset(const CompilerType source_ct,
                                              const CompilerType target_ct,
                                              int64_t &output_offset) = 0;
 

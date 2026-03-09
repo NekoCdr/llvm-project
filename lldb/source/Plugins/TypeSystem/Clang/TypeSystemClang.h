@@ -883,7 +883,7 @@ public:
 
   /// Gets the offset between the given compiler types if they are related by
   /// inheritance, or returns error.
-  Status GetInheritanceAddressOffset(const CompilerType source_ct,
+  Status GetBaseClassSubobjectOffset(const CompilerType source_ct,
                                      const CompilerType target_ct,
                                      int64_t &output_offset) override;
 
@@ -1201,7 +1201,7 @@ private:
                   llvm::function_ref<bool(clang::QualType)> predicate) const;
 
   /// Tries to get the offset between the given base and derived classes.
-  std::optional<int64_t> TryToGetBaseOffset(const clang::CXXRecordDecl &derived,
+  std::optional<int64_t> TryGetBaseOffset(const clang::CXXRecordDecl &derived,
                                             const clang::CXXRecordDecl &base,
                                             clang::CXXBasePaths &paths);
 

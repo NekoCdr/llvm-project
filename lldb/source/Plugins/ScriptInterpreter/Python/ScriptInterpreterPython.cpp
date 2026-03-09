@@ -1828,7 +1828,7 @@ Status ScriptInterpreterPythonImpl::RecognizeType(
   int64_t offset = 0;
 
   // We ignore offset errors and assume that the user knows what they are doing.
-  Status err = source_ct.GetTypeSystem()->GetInheritanceAddressOffset(
+  Status err = source_ct.GetTypeSystem()->GetBaseClassSubobjectOffset(
       source_ct, target_ct, offset);
   output_addr = input_valobj->GetPointerValue().address + offset;
 

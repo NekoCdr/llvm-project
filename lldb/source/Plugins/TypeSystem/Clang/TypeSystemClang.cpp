@@ -5965,7 +5965,7 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
 }
 
 std::optional<int64_t>
-TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl &derived,
+TypeSystemClang::TryGetBaseOffset(const clang::CXXRecordDecl &derived,
                                     const clang::CXXRecordDecl &base,
                                     clang::CXXBasePaths &paths) {
   bool is_ambiguous = paths.isAmbiguous(
@@ -5998,7 +5998,7 @@ TypeSystemClang::TryToGetBaseOffset(const clang::CXXRecordDecl &derived,
 }
 
 Status
-TypeSystemClang::GetInheritanceAddressOffset(const CompilerType source_ct,
+TypeSystemClang::GetBaseClassSubobjectOffset(const CompilerType source_ct,
                                              const CompilerType target_ct,
                                              int64_t &output_offset) {
   auto *source_decl = GetAsCXXRecordDecl(source_ct.GetOpaqueQualType());
@@ -6016,7 +6016,7 @@ TypeSystemClang::GetInheritanceAddressOffset(const CompilerType source_ct,
         target_ct.GetTypeName().AsCString());
   }
 
-  auto offset_error = [](const CompilerType *base,
+  auto ambiguous_base_error = [](const CompilerType *base,
                          const CompilerType *derived) {
     return Status::FromErrorStringWithFormat(
         "Failure in offset calculation: '%s' is ambiguous base for '%s'",
@@ -6029,22 +6029,22 @@ TypeSystemClang::GetInheritanceAddressOffset(const CompilerType source_ct,
   GetCompleteDecl(target_decl);
   if (target_decl->isDerivedFrom(source_decl, paths)) {
     if (std::optional<int64_t> offset =
-            TryToGetBaseOffset(*target_decl, *source_decl, paths)) {
+            TryGetBaseOffset(*target_decl, *source_decl, paths)) {
       output_offset = -*offset;
       return Status();
     }
-    return offset_error(&source_ct, &target_ct);
+    return ambiguous_base_error(&source_ct, &target_ct);
   }
 
   // Less typical use case for type recognizers: upcast.
   GetCompleteDecl(source_decl);
   if (source_decl->isDerivedFrom(target_decl, paths)) {
     if (std::optional<int64_t> offset =
-            TryToGetBaseOffset(*source_decl, *target_decl, paths)) {
+            TryGetBaseOffset(*source_decl, *target_decl, paths)) {
       output_offset = *offset;
       return Status();
     }
-    return offset_error(&target_ct, &source_ct);
+    return ambiguous_base_error(&target_ct, &source_ct);
   }
 
   return Status::FromErrorStringWithFormat(
