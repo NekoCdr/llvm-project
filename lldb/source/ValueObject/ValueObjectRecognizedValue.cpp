@@ -143,8 +143,6 @@ bool ValueObjectRecognizedValue::UpdateValue() {
   m_data.SetByteOrder(target->GetArchitecture().GetByteOrder());
   m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
 
-  Value old_value(m_value);
-
   CompilerType recognized_ct;
   Address dynamic_address;
   lldb::TypeRecognizerImplSP recognizer_sp = m_parent->GetTypeRecognizer();
