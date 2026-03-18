@@ -2,6 +2,8 @@ import lldb
 from lldbsuite.test.lldbtest import TestBase, line_number, VALID_TARGET, VALID_BREAKPOINT, PROCESS_STOPPED
 from lldbsuite.test import lldbutil
 
+USE_DYNAMIC = lldb.eDynamicCanRunTarget
+NO_DYNAMIC = lldb.eNoDynamicValues
 
 class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
     def setUp(self):
@@ -30,9 +32,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
 
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
@@ -91,9 +90,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
-
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
         self.assertEqual(len(threads), 1)
@@ -140,9 +136,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
 
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
@@ -191,9 +184,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
-
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
         self.assertEqual(len(threads), 1)
@@ -240,9 +230,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
 
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
@@ -294,9 +281,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
-
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
         self.assertEqual(len(threads), 1)
@@ -346,9 +330,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
 
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
@@ -400,9 +381,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
-
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
         self.assertEqual(len(threads), 1)
@@ -453,9 +431,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
-
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
         self.assertEqual(len(threads), 1)
@@ -503,9 +478,6 @@ class RecognizedValueWithExpressionEvaluatorTestCase(TestBase):
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        USE_DYNAMIC = lldb.eDynamicCanRunTarget
-        NO_DYNAMIC = lldb.eNoDynamicValues
 
         # Now run to cast breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, br_cast_func)
