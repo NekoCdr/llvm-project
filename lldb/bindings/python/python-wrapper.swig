@@ -181,6 +181,51 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
   return true;
 }
 
+PythonObject
+lldb_private::python::SWIGBridge::LLDBSwigPythonCallRecognizerScript(
+    const char *p_function_name, PyObject *session_dictionary,
+    const lldb::ValueObjectSP &valobj_sp) {
+  assert(p_function_name);
+  assert(p_function_name[0] != '\0');
+  assert(session_dictionary);
+  assert(valobj_sp);
+
+  PyErr_Cleaner py_err_cleaner(true); // show Python errors
+
+  if (!PythonDictionary::Check(session_dictionary))
+    return PythonObject();
+
+  PythonDictionary dict(PyRefType::Borrowed, session_dictionary);
+
+  PythonCallable pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+      p_function_name, dict);
+
+  assert(PyFunction_Check(pfunc.get()));
+  if (!pfunc.IsAllocated())
+    return PythonObject();
+
+  auto argc = pfunc.GetArgInfo();
+  if (!argc) {
+    llvm::consumeError(argc.takeError());
+    return PythonObject();
+  }
+
+  auto sb_value = std::unique_ptr<lldb::SBValue>(new lldb::SBValue(valobj_sp));
+  assert(sb_value->IsValid());
+  sb_value->SetPreferDynamicValue(lldb::eNoDynamicValues);
+
+  PythonObject val_arg = SWIGBridge::ToSWIGWrapper(std::move(sb_value));
+  if (!val_arg.IsAllocated())
+    return PythonObject();
+
+  PythonObject result = pfunc(val_arg, dict);
+
+  if (result.IsAllocated())
+    return result;
+
+  return PythonObject();
+}
+
 PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateSyntheticProvider(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::ValueObjectSP &valobj_sp) {
@@ -538,6 +583,19 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data
 
   int valid_cast =
       SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBValue, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBType(PyObject *data) {
+  lldb::SBType *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBType, /*flags=*/0);
 
   if (valid_cast == -1)
     return NULL;
@@ -1023,6 +1081,17 @@ lldb::ValueObjectSP lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObj
     valobj_sp = sb_ptr->GetSP();
   }
   return valobj_sp;
+}
+
+lldb::TypeImplSP
+lldb_private::python::SWIGBridge::LLDBSWIGPython_GetTypeImplSPFromSBType(
+    void *data) {
+  lldb::TypeImplSP type_impl_sp;
+  if (data) {
+    lldb::SBType *sb_ptr = static_cast<lldb::SBType *>(data);
+    type_impl_sp = sb_ptr->GetSP();
+  }
+  return type_impl_sp;
 }
 
 // For the LogOutputCallback functions

@@ -189,6 +189,9 @@ public:
   virtual HardcodedFormatters::HardcodedSyntheticFinder
   GetHardcodedSynthetics();
 
+  virtual HardcodedFormatters::HardcodedRecognizerFinder
+  GetHardcodedRecognizers();
+
   virtual std::vector<FormattersMatchCandidate>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic);

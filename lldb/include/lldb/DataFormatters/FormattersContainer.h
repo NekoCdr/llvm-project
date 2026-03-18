@@ -19,6 +19,7 @@
 
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/TypeFormat.h"
+#include "lldb/DataFormatters/TypeRecognizer.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Symbol/CompilerType.h"

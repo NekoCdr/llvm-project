@@ -18,9 +18,11 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/WatchpointOptions.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ThreadedCommunication.h"
@@ -31,10 +33,12 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -1765,6 +1769,65 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
   }
 
   return ret_val;
+}
+
+Status ScriptInterpreterPythonImpl::RecognizeType(
+    const char *p_function_name, const lldb::ValueObjectSP input_valobj,
+    CompilerType &output_ct, Address &output_addr) {
+  if (!p_function_name || p_function_name[0] == '\0')
+    return Status("No python function name");
+
+  if (!input_valobj.get())
+    return Status("Input ValueObject is incorrect");
+
+  PyObject *session_dict = GetSessionDictionary().get();
+  if (!session_dict)
+    return Status("Session dictionary is incorrect");
+
+  Locker py_lock(this,
+                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+
+  PythonObject ret_val = SWIGBridge::LLDBSwigPythonCallRecognizerScript(
+      p_function_name, session_dict, input_valobj);
+
+  if (!ret_val.IsAllocated())
+    return Status("No python function result");
+
+  PyObject *out_py_valtype = ret_val.get();
+
+  if (!out_py_valtype || out_py_valtype == Py_None) {
+    Py_XDECREF(out_py_valtype);
+    return Status("No correct PyObject");
+  }
+
+  lldb::SBType *sb_type_ptr =
+      (lldb::SBType *)LLDBSWIGPython_CastPyObjectToSBType(out_py_valtype);
+
+  if (sb_type_ptr == nullptr) {
+    Py_XDECREF(out_py_valtype);
+    return Status("No SBType");
+  }
+
+  lldb::TypeImplSP type_sp =
+      SWIGBridge::LLDBSWIGPython_GetTypeImplSPFromSBType(sb_type_ptr);
+
+  output_ct = type_sp->GetCompilerType(true);
+
+  CompilerType source_ct =
+      input_valobj->IsPointerType()
+          ? input_valobj->GetCompilerType().GetPointeeType()
+          : input_valobj->GetCompilerType();
+  CompilerType target_ct =
+      output_ct.IsPointerType() ? output_ct.GetPointeeType() : output_ct;
+
+  int64_t offset = 0;
+
+  // We ignore offset errors and assume that the user knows what they are doing.
+  Status err = source_ct.GetTypeSystem()->GetBaseClassSubobjectOffset(
+      source_ct, target_ct, offset);
+  output_addr = input_valobj->GetPointerValue().address + offset;
+
+  return err;
 }
 
 bool ScriptInterpreterPythonImpl::FormatterCallbackFunction(

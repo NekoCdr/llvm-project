@@ -13,6 +13,7 @@ add_lldb_library(lldbValueObject NO_PLUGIN_DEPENDENCIES
   ValueObjectDynamicValue.cpp
   ValueObjectList.cpp
   ValueObjectMemory.cpp
+  ValueObjectRecognizedValue.cpp
   ValueObjectRegister.cpp
   ValueObjectSynthetic.cpp
   ValueObjectUpdater.cpp
