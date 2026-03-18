@@ -147,86 +147,69 @@ struct Y_2 : X_2 {
 
 } // namespace NS
 
-//===-- [Function section] ------------------------------------------------===//
+//===-- [Test cases] ------------------------------------------------------===//
+
+using breakpoint = int;
 
 int main() {
-  // Downcast from A_2 to B_2
   {
-    C_1 c1_obj;
-    c1_obj.target = CastTarget::B_2;
-    [[maybe_unused]] A_2 *ptr{&c1_obj};
-    [[maybe_unused]] int downcast_A2_to_B2{0};
+    C_1 obj;
+    obj.target = CastTarget::B_2;
+    [[maybe_unused]] A_2 *ptr{&obj};
+    [[maybe_unused]] breakpoint downcast_A2_to_B2;
   }
-
-  // Upcast from C_1 to A_2
   {
-    C_1 c1_obj;
-    c1_obj.target = CastTarget::A_2;
-    [[maybe_unused]] C_1 *ptr{&c1_obj};
-    [[maybe_unused]] int upcast_C1_to_A2{0};
+    C_1 obj;
+    obj.target = CastTarget::A_2;
+    [[maybe_unused]] C_1 *ptr{&obj};
+    [[maybe_unused]] breakpoint upcast_C1_to_A2;
   }
-
-  // Downcast from virtual A_2 to B_3
   {
-    C_2 c2_obj;
-    c2_obj.target = CastTarget::B_3;
-    [[maybe_unused]] A_2 *ptr{&c2_obj};
-    [[maybe_unused]] int downcast_virt_A2_to_B3{0};
+    C_2 obj;
+    obj.target = CastTarget::B_3;
+    [[maybe_unused]] A_2 *ptr{&obj};
+    [[maybe_unused]] breakpoint downcast_virt_A2_to_B3;
   }
-
-  // Upcast from C_2 to virtual A_2
   {
-    C_2 c2_obj;
-    c2_obj.target = CastTarget::A_2;
-    [[maybe_unused]] C_2 *ptr{&c2_obj};
-    [[maybe_unused]] int upcast_C2_to_virt_A2{0};
+    C_2 obj;
+    obj.target = CastTarget::A_2;
+    [[maybe_unused]] C_2 *ptr{&obj};
+    [[maybe_unused]] breakpoint upcast_C2_to_virt_A2;
   }
-
-  // Ambiguous downcast from A_1 to C_1
   {
-    B_2 b2_obj;
-    b2_obj.a_1_target = CastTarget::C_1;
-    [[maybe_unused]] A_1 *ptr{&b2_obj};
-    [[maybe_unused]] int ambiguous_downcast_A1_to_C1{0};
+    B_2 obj;
+    obj.a_1_target = CastTarget::C_1;
+    [[maybe_unused]] A_1 *ptr{&obj};
+    [[maybe_unused]] breakpoint ambiguous_downcast_A1_to_C1;
   }
-
-  // Ambiguous upcast from C_1 to A_1
   {
-    C_1 c1_obj;
-    c1_obj.target = CastTarget::A_1;
-    [[maybe_unused]] C_1 *ptr{&c1_obj};
-    [[maybe_unused]] int ambiguous_upcast_C1_to_A1{0};
+    C_1 obj;
+    obj.target = CastTarget::A_1;
+    [[maybe_unused]] C_1 *ptr{&obj};
+    [[maybe_unused]] breakpoint ambiguous_upcast_C1_to_A1;
   }
-
-  // Ambiguous upcast from C_3 to A_1
   {
-    C_3 c3_obj;
-    c3_obj.target = CastTarget::A_1;
-    [[maybe_unused]] C_3 *ptr{&c3_obj};
-    [[maybe_unused]] int ambiguous_upcast_C3_to_A1{0};
+    C_3 obj;
+    obj.target = CastTarget::A_1;
+    [[maybe_unused]] C_3 *ptr{&obj};
+    [[maybe_unused]] breakpoint ambiguous_upcast_C3_to_A1;
   }
-
-  // Ambiguous upcast from C_4 to A_1
   {
-    C_4 c4_obj;
-    c4_obj.target = CastTarget::A_1;
-    [[maybe_unused]] C_4 *ptr{&c4_obj};
-    [[maybe_unused]] int ambiguous_upcast_C4_to_A1{0};
+    C_4 obj;
+    obj.target = CastTarget::A_1;
+    [[maybe_unused]] C_4 *ptr{&obj};
+    [[maybe_unused]] breakpoint ambiguous_upcast_C4_to_A1;
   }
-
-  // template upcast from Y_1 to X_1
   {
-    Y_1<int, char> y1_obj;
-    y1_obj.target = CastTarget::X_1;
-    [[maybe_unused]] Y_1<int, char> *ptr{&y1_obj};
-    [[maybe_unused]] int template_upcast_Y1_to_X1{0};
+    Y_1<int, char> obj;
+    obj.target = CastTarget::X_1;
+    [[maybe_unused]] Y_1<int, char> *ptr{&obj};
+    [[maybe_unused]] breakpoint template_upcast_Y1_to_X1;
   }
-
-  // qualified upcast from Y_2 to X_2
   {
-    NS::Y_2 y2_obj;
-    y2_obj.target = CastTarget::X_2;
-    [[maybe_unused]] NS::Y_2 *ptr{&y2_obj};
-    [[maybe_unused]] int qualified_upcast_Y2_to_X2{0};
+    NS::Y_2 obj;
+    obj.target = CastTarget::X_2;
+    [[maybe_unused]] NS::Y_2 *ptr{&obj};
+    [[maybe_unused]] breakpoint qualified_upcast_Y2_to_X2;
   }
 }
